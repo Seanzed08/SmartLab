@@ -1,0 +1,64 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Assign Course | NEUST Admin</title>
+
+  
+  <link rel="stylesheet" href="{% static 'css/admin/admin-style.css' %}" />
+  <link rel="stylesheet" href="{% static 'css/admin/assign-teacher.css' %}" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div class="dashboard-container">
+
+    {% include 'includes/sidebar.html' %}
+
+    <div class="main-panel">
+
+      {% include 'includes/header.html' %}
+
+      <section class="content-area">
+        <h2>Assign Course to {{ faculty_name }}</h2>
+
+        <form method="POST" class="form-card">
+          {% csrf_token %}
+
+          <div class="form-group">
+            <label for="course_id">Course</label>
+            <select name="course_id" required>
+              <option value="" disabled selected>Select Course</option>
+              {% for course in courses %}
+                {# course = (id, name) #}
+                <option value="{{ course.0 }}">{{ course.1 }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="semester_id">Semester</label>
+            <select name="semester_id" required>
+              <option value="" disabled selected>Select Semester</option>
+              {% for sem in semesters %}
+                {# sem = (id, label) #}
+                <option value="{{ sem.0 }}">{{ sem.1 }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-add">Assign</button>
+            <a href="{% url 'manage_faculty' %}" class="btn btn-cancel">Cancel</a>
+          </div>
+        </form>
+      </section>
+
+    </div>
+  </div>
+
+
+  <script src="{% static 'js/header.js' %}"></script>
+</body>
+</html>

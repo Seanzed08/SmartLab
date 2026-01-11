@@ -1,0 +1,214 @@
+/* ================================
+   Admin Dashboard (Compact)
+   Page doesn't scroll; table does.
+   Modal blocks header interactions.
+   ================================ */
+
+/* ——— Layout scaffold ——— */
+.dashboard-page .main-panel{
+  display:flex;
+  flex-direction:column;
+  height:100vh;              /* lock to viewport */
+  overflow:hidden;           /* no page scroll */
+}
+
+.dashboard-page .content-area{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  padding:20px 24px;
+  background:#f9f9f9;
+  overflow:hidden;           /* children manage their own scroll */
+  font-family:'Roboto',system-ui,-apple-system,Segoe UI,Helvetica,Arial,sans-serif;
+  color:#0f172a;
+  align-items:flex-start;     /* keep header/filters left-aligned */
+}
+
+/* ——— Headings ——— */
+.dashboard-page h2{margin:6px 0 10px;font-size:22px;font-weight:800;color:#0f2454}
+.dashboard-page h3{margin:0 0 10px;color:#2c3e50}
+
+/* ——— Filters row (horizontal) ——— */
+.dashboard-page .filters{
+  display:flex;
+  flex-wrap:nowrap;              /* keep in one line */
+  align-items:center;
+  gap:10px;
+  margin:0 0 8px;
+  width:100%;
+}
+.dashboard-page .filters select,
+.dashboard-page .filters input[type="date"]{
+  appearance:none;
+  flex:1 1 0;
+  min-width:160px;
+  max-width:220px;
+  height:36px;
+  padding:6px 10px;
+  border:1px solid #cbd5e1;
+  border-radius:6px;
+  background:#fff;
+  font-size:14px;
+  color:#2c3e50;
+  transition:border-color .2s, box-shadow .2s;
+}
+.dashboard-page .filters select:focus,
+.dashboard-page .filters input[type="date"]:focus{
+  outline:none;border-color:#0d6efd;box-shadow:0 0 0 2px rgba(13,110,253,.18)
+}
+.dashboard-page .filters .apply-btn{
+  flex:0 0 auto;
+  background:#002060;color:#fff;border:0;border-radius:6px;
+  padding:8px 16px;font-weight:600;cursor:pointer;
+  transition:background-color .2s, transform .1s;
+}
+.dashboard-page .filters .apply-btn:hover{
+  background:#003399;transform:translateY(-1px)
+}
+
+/* Stack filters only on small screens */
+@media (max-width:720px){
+  .dashboard-page .filters{flex-wrap:wrap}
+  .dashboard-page .filters select,
+  .dashboard-page .filters input[type="date"],
+  .dashboard-page .filters .apply-btn{
+    flex:1 1 100%;max-width:100%
+  }
+}
+
+/* ——— Export / Print buttons ——— */
+.dashboard-page .export-controls{
+  display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 6px
+}
+/* Let each form behave like its button so they line up perfectly */
+.dashboard-page .export-controls form{display:contents}
+.dashboard-page .mini-btn{
+  border:none;border-radius:9999px;padding:7px 12px;cursor:pointer;
+  background:#0056b3;color:#fff;font-size:12.5px;line-height:1.1;white-space:nowrap
+}
+.dashboard-page .mini-btn.ghost{background:#eef2ff;color:#111827;border:1px solid #e5e7eb}
+.dashboard-page .mini-btn:hover{box-shadow:0 2px 8px rgba(2,132,199,.25)}
+
+/* ——— Table: only this scrolls (no horizontal scroll) ——— */
+/* --- Centered Compact Table --- */
+.dashboard-page .content-area > table {
+  display: block;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 95%;                     /* slightly narrower */
+  max-width: 1200px;              /* keeps it centered and neat */
+  margin: 0 auto;                 /* centers the table only */
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 6px 16px rgba(2, 13, 43, 0.06);
+  table-layout: fixed;
+}
+
+/* keep inner structure when display:block */
+.dashboard-page .content-area > table thead,
+.dashboard-page .content-area > table tbody{
+  display:table; width:100%; table-layout:fixed;
+}
+.dashboard-page .content-area > table thead{
+  position:sticky; top:0; z-index:1;
+  background:#eef1f6; text-transform:uppercase; font-size:12px; color:#334155
+}
+.dashboard-page table th,
+.dashboard-page table td{
+  padding:8px 10px;              /* tighter */
+  text-align:center;
+  border-bottom:1px solid #eef2f5;
+  font-size:12.3px;              /* slightly smaller */
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.dashboard-page table tbody tr:hover{background:#fafbfd}
+
+/* Header wrapping so long labels don't clip */
+.dashboard-page .content-area > table thead th{
+  white-space:normal;           /* allow multi-line */
+  word-break:break-word;
+  overflow:visible;
+  line-height:1.25;
+  padding-top:9px;
+  padding-bottom:9px;
+}
+
+/* —— Compact column widths (keeps “Preview” visible, no H-scroll) —— */
+.dashboard-page .content-area > table th:nth-child(1),
+.dashboard-page .content-area > table td:nth-child(1){width:100px}   /* Date */
+.dashboard-page .content-area > table th:nth-child(2),
+.dashboard-page .content-area > table td:nth-child(2){width:55px}    /* Lab */
+.dashboard-page .content-area > table th:nth-child(3),
+.dashboard-page .content-area > table td:nth-child(3){width:145px}   /* Teacher */
+.dashboard-page .content-area > table th:nth-child(4),
+.dashboard-page .content-area > table td:nth-child(4){width:105px}   /* Course */
+.dashboard-page .content-area > table th:nth-child(5),
+.dashboard-page .content-area > table td:nth-child(5){width:80px}    /* Section */
+.dashboard-page .content-area > table th:nth-child(6),
+.dashboard-page .content-area > table td:nth-child(6){width:95px}    /* Time */
+.dashboard-page .content-area > table th:nth-child(7),
+.dashboard-page .content-area > table td:nth-child(7){width:180px}   /* Semester */
+.dashboard-page .content-area > table th:nth-child(8),
+.dashboard-page .content-area > table td:nth-child(8){width:85px}    /* Present */
+.dashboard-page .content-area > table th:nth-child(9),
+.dashboard-page .content-area > table td:nth-child(9){
+  width:240px;                  /* Actions (Slip + Attendance + Preview) */
+  min-width:240px;
+  white-space:nowrap;
+}
+
+/* Action buttons inside table (compact) */
+.dashboard-page .td-actions{
+  display:flex; align-items:center; justify-content:flex-start; gap:6px;
+}
+.dashboard-page .td-actions .action-btn{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:5px 8px;border-radius:9999px;font-size:12px;text-decoration:none
+}
+.dashboard-page .action-btn.gray-btn{background:#f3f4f6;color:#111827;border:1px solid #e5e7eb}
+.dashboard-page .action-btn.blue-btn{background:#0056b3;color:#fff}
+.dashboard-page .action-btn.outline{background:#fff;border:1px solid #e5e7eb;color:#111827}
+
+/* Links */
+.dashboard-page table a{color:#007bff;font-weight:500;text-decoration:none}
+.dashboard-page table a:hover{text-decoration:underline}
+
+/* ——— Preview Modal (blocks header + page) ——— */
+.modal-backdrop{
+  position:fixed; inset:0; background:rgba(0,0,0,.45);
+  display:none; z-index:4000; pointer-events:auto;
+}
+.modal{
+  position:fixed; inset:0; display:none; align-items:center; justify-content:center;
+  z-index:4010; pointer-events:none; /* container */
+}
+.modal .modal-card{
+  width:min(760px,94vw); max-height:86vh; overflow:auto;
+  background:#fff; border-radius:14px; border:1px solid #e5e7eb;
+  box-shadow:0 20px 60px rgba(0,0,0,.25); pointer-events:auto; /* the card is interactive */
+}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #eef2ff}
+.modal-title{font-size:18px;font-weight:700}
+.modal-body{padding:16px 18px}
+.kv{display:grid;grid-template-columns:160px 1fr;gap:8px 18px;margin-bottom:8px}
+.kv .k{color:#64748b}
+.modal-foot{display:flex;justify-content:flex-end;gap:8px;padding:14px 18px;border-top:1px solid #eef2ff}
+.chip{display:inline-block;background:#eef2ff;border:1px solid #e5e7eb;border-radius:9999px;padding:4px 10px;font-size:12px;margin-right:6px;margin-bottom:6px}
+
+/* ——— Small screens ——— */
+@media (max-width:900px){
+  .dashboard-page .content-area{padding:14px}
+  .dashboard-page .filters{gap:8px}
+  .dashboard-page .mini-btn{padding:6px 10px;font-size:12px}
+  .dashboard-page .content-area > table th,
+  .dashboard-page .content-area > table td{font-size:12px;padding:7px 8px}
+  .kv{grid-template-columns:120px 1fr}
+  /* slightly relax Actions width on narrower screens */
+  .dashboard-page .content-area > table th:nth-child(9),
+  .dashboard-page .content-area > table td:nth-child(9){width:220px;min-width:220px}
+}

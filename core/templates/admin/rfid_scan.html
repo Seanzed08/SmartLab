@@ -1,0 +1,25 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>RFID Scan</title>
+</head>
+<body onload="document.getElementById('rfidInput').focus();">
+  <h2>Scan RFID Tag</h2>
+  <form method="POST" action="{% url 'rfid_scan' %}">
+    {% csrf_token %}
+    <input type="hidden" name="lab_id" value="{{ lab_id }}">
+    <input type="text" name="rfid_code" id="rfidInput" autofocus autocomplete="off" />
+  </form>
+
+  <script>
+    const input = document.getElementById('rfidInput');
+    input.addEventListener('input', function () {
+      if (input.value.length >= 10) {  // adjust length if needed
+        input.form.submit();
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>RFID Testing Page</title>
+    <style>
+        body { font-family: Arial; background: #f5f5f5; padding: 40px; }
+        .card {
+            background: #fff;
+            padding: 25px;
+            max-width: 500px;
+            margin: auto;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        input, button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+        }
+        pre {
+            background: #f0f0f0;
+            padding: 10px;
+            margin-top: 20px;
+            border-radius: 8px;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>RFID Tap Test</h2>
+        <form method="POST">
+            {% csrf_token %}
+            <label>RFID Code:</label>
+            <input type="text" name="rfid_code" required>
+
+            <label>RFID Reader ID:</label>
+            <input type="text" name="rfid_reader_id" value="LAB1-READER" required>
+
+            <button type="submit">Send Tap</button>
+        </form>
+
+        {% if response_data %}
+        <h3>Response:</h3>
+        <pre>{{ response_data|safe }}</pre>
+        {% endif %}
+    </div>
+</body>
+</html>

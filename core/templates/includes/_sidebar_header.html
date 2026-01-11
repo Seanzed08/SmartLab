@@ -1,0 +1,9 @@
+{% load static %}
+<div class="sidebar-header">
+  {% if brand_logo_url %}
+    <img src="{{ brand_logo_url }}" alt="{{ brand_name }} Logo" class="logo" />
+  {% else %}
+    <img src="{% static 'img/neust-logo.png' %}" alt="{{ brand_name }} Logo" class="logo" />
+  {% endif %}
+  <h4 class="sidebar-title">{{ brand_name }}</h4>
+</div>

@@ -1,0 +1,148 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Operating Time | NEUST Admin</title>
+  <link rel="stylesheet" href="{% static 'css/admin/admin-style.css' %}" />
+  <link rel="stylesheet" href="{% static 'css/admin/manage-operating-time.css' %}" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+
+  </style>
+</head>
+<body class="dashboard-page">
+  <div class="dashboard-container">
+    {% include 'includes/sidebar.html' %}
+
+    <div class="main-panel">
+      {% include 'includes/header.html' %}
+
+      <section class="content-area">
+        <h2>Operating Time</h2>
+
+        <div class="panel week-grid">
+          <div class="panel-header">
+            <h3>Weekly Schedule</h3>
+          </div>
+
+          <form method="POST" action="{% url 'manage_operating_time' %}">
+            {% csrf_token %}
+
+            <div class="controls-row">
+              <button type="button" class="btn btn-secondary btn-sm" id="btnCopyMon">Copy Monday → Weekdays</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btnWeekendClosed">Close Sat &amp; Sun</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btnSetAllOpen"
+                      data-open="{{ default_open }}" data-close="{{ default_close }}">
+                Set {{ default_open }}–{{ default_close }} All Days
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btnSetAllClosed">Close All Days</button>
+            </div>
+
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Day</th>
+                    <th style="width:120px;">Open?</th>
+                    <th class="nowrap" style="width:160px;">Start Time</th>
+                    <th class="nowrap" style="width:160px;">End Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for d in week %}
+                  <tr>
+                    <td class="ellipsis"><strong>{{ d.label }}</strong></td>
+                    <td class="nowrap">
+                      <label class="flex" style="gap:8px;align-items:center;">
+                        <input type="checkbox" name="is_open_{{ d.dow }}" id="is_open_{{ d.dow }}" {% if d.is_open %}checked{% endif %}>
+                        <span>{% if d.is_open %}Open{% else %}Closed{% endif %}</span>
+                      </label>
+                    </td>
+                    <td>
+                      <input type="time" name="open_{{ d.dow }}" id="open_{{ d.dow }}" value="{{ d.open }}" {% if not d.is_open %}disabled{% endif %} {% if d.is_open %}required{% endif %}>
+                    </td>
+                    <td>
+                      <input type="time" name="close_{{ d.dow }}" id="close_{{ d.dow }}" value="{{ d.close }}" {% if not d.is_open %}disabled{% endif %} {% if d.is_open %}required{% endif %}>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+
+            <div class="form-help">
+              <ul>
+                <li>When a day is <strong>Closed</strong>, start/end times are stored as <strong>NULL</strong>.</li>
+                <li>When a day is <strong>Open</strong>, both times are required and <em>Start &lt; End</em>.</li>
+              </ul>
+            </div>
+
+            <div class="modal-actions" style="margin-top:14px;">
+              <button type="submit" class="btn btn-add">Save Schedule</button>
+            </div>
+          </form>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    // DOW codes in DB: Mon=1..Sat=6, Sun=0. Use this order for UI ops:
+    const DAYS = [1,2,3,4,5,6,0];
+
+    function toggleRow(dow){
+      const open = document.getElementById('open_'+dow);
+      const close = document.getElementById('close_'+dow);
+      const flag = document.getElementById('is_open_'+dow).checked;
+      if(open) { open.disabled = !flag; open.required = flag; }
+      if(close){ close.disabled = !flag; close.required = flag; }
+    }
+    function getVal(id){ const el = document.getElementById(id); return el ? el.value : ""; }
+    function setVal(id,v){ const el = document.getElementById(id); if(el){ el.value = v; } }
+    function setChecked(id,v){ const el = document.getElementById(id); if(el){ el.checked = v; el.dispatchEvent(new Event('change')); } }
+
+    function copyMondayToWeekdays(){
+      const monOpen  = getVal('open_1');
+      const monClose = getVal('close_1');
+      const monFlag  = document.getElementById('is_open_1').checked;
+      [2,3,4,5].forEach(d=>{
+        setChecked('is_open_'+d, monFlag);
+        setVal('open_'+d, monOpen);
+        setVal('close_'+d, monClose);
+      });
+    }
+    function setWeekendClosed(){
+      [6,0].forEach(d=> setChecked('is_open_'+d, false));
+    }
+    function setAllOpen(openT, closeT){
+      DAYS.forEach(d=>{
+        setChecked('is_open_'+d, true);
+        setVal('open_'+d, openT);
+        setVal('close_'+d, closeT);
+      });
+    }
+    function setAllClosed(){
+      DAYS.forEach(d=> setChecked('is_open_'+d, false));
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      // Bind buttons
+      document.getElementById('btnCopyMon')?.addEventListener('click', copyMondayToWeekdays);
+      document.getElementById('btnWeekendClosed')?.addEventListener('click', setWeekendClosed);
+      document.getElementById('btnSetAllOpen')?.addEventListener('click', (e) => {
+        const openT  = e.currentTarget.dataset.open;
+        const closeT = e.currentTarget.dataset.close;
+        setAllOpen(openT, closeT);
+      });
+      document.getElementById('btnSetAllClosed')?.addEventListener('click', setAllClosed);
+
+      // Bind checkbox change handlers & initialize disabled states
+      DAYS.forEach(d=>{
+        document.getElementById('is_open_'+d)?.addEventListener('change', () => toggleRow(d));
+        toggleRow(d);
+      });
+    });
+  </script>
+</body>
+</html>

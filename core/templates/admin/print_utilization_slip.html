@@ -1,0 +1,190 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Class Laboratory Utilization Slip</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 5mm;
+    }
+
+    @media print {
+      html, body {
+        width: 205mm;
+        height: 297mm;
+        margin: 5;
+        padding: 0;
+      }
+      table, tr {
+        page-break-inside: avoid;
+      }
+      thead {
+        display: table-header-group;
+      }
+      body::before, body::after {
+        display: none;
+      }
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 13px;
+      margin: 3mm 15mm 15mm 8mm; /* top=3mm, left=8mm */
+      color: #000;
+    }
+
+    .header-table {
+      width: 100%;
+      margin-bottom: 5px;
+    }
+
+    .header-table td {
+      border: none;
+      vertical-align: top;
+    }
+
+    .logo-cell {
+      width: 70px;
+      padding-right: 10px;
+    }
+
+    .title-cell {
+      text-align: left;
+      padding-top: 0;
+    }
+
+    .form-row {
+      margin-bottom: 10px;
+    }
+
+    .label {
+      display: inline-block;
+      min-width: 190px;
+      font-weight: bold;
+    }
+
+    .input-line {
+      display: inline-block;
+      border-bottom: 1px solid #000;
+      width: 70%;
+      height: 16px;
+      vertical-align: bottom;
+      padding-left: 5px;
+    }
+
+    .top-row {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+      margin-bottom: 20px;
+    }
+
+    .top-row .input-line {
+      width: 120px;
+    }
+
+    .remarks {
+      margin-top: 20px;
+      margin-bottom: 10px;
+    }
+
+    .remarks-line {
+      border-bottom: 1px solid #000;
+      height: 20px;
+      margin-bottom: 2px;
+      padding-left: 5px;
+    }
+
+    .approval-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      margin-top: 20px;
+    }
+
+    .approval-table th, .approval-table td {
+      border: 1px solid #000;
+      padding: 6px;
+      text-align: center;
+    }
+
+    .footer {
+      font-size: 11px;
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <!-- Centered Header -->
+<table class="header-table" style="text-align: center;">
+  <tr>
+    <td>
+      <img src="{% static 'img/neust-logo.png' %}" alt="NEUST Logo" style="width: 60px; margin-bottom: 5px;">
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <p style="margin: 0;">Republic of the Philippines</p>
+      <p style="margin: 0;"><strong>NUEVA ECIJA UNIVERSITY OF SCIENCE AND TECHNOLOGY</strong><br> Nueva Ecija, Philippines</p>
+      <h3 style="margin: 5px 0;"><strong>CLASS LABORATORY UTILIZATION SLIP</strong></h3>
+    </td>
+  </tr>
+</table>
+
+
+  <!-- Top Row (LUS No and Date) -->
+  <div class="top-row">
+    <div><strong>LUS No:</strong> <span class="input-line">{{ utilization_id }}</span></div>
+    <div><strong>Date:</strong> <span class="input-line">{{ date }}</span></div>
+  </div>
+
+  <!-- Fields -->
+  <div class="form-row"><span class="label">Name of Instructor:</span> <span class="input-line">{{ teacher_name }}</span></div>
+  <div class="form-row"><span class="label">Subject:</span> <span class="input-line">{{ course_code }}</span></div>
+  <div class="form-row"><span class="label"><em>Student Year and Section:</em></span> <span class="input-line">{{ section }}</span></div>
+  <div class="form-row"><span class="label">Number of Students:</span> <span class="input-line">{{ students_present }}</span></div>
+  <div class="form-row"><span class="label">Laboratory Number:</span> <span class="input-line">{{ lab_num }}</span></div>
+  <div class="form-row"><span class="label">Time Duration:</span> <span class="input-line">{{ time_duration }}</span></div>
+
+  <!-- Remarks -->
+  <div class="remarks"><strong>Remarks:</strong></div>
+  <div class="remarks-line">{{ remarks}}</div>
+  <div class="remarks-line">{{ remarks_line2 }}</div>
+  <div class="remarks-line">{{ remarks_line3 }}</div>
+  <div class="remarks-line">{{ remarks_line4 }}</div>
+  <div class="remarks-line">{{ remarks_line5 }}</div>
+
+  <!-- Approval Table -->
+  <table class="approval-table">
+    <tr>
+      <th>Action</th>
+      <th>Name</th>
+      <th>Designation</th>
+      <th>Signature</th>
+      <th>Date</th>
+    </tr>
+    <tr>
+      <td>Requested</td>
+      <td>{{ teacher_name }}</td>
+      <td>Instructor</td>
+      <td></td>
+      <td>{{ date }}</td>
+    </tr>
+    <tr>
+      <td>Processed</td>
+      <td>{{ processed_by }}</td>
+      <td>Approver</td>
+      <td></td>
+      <td>{{ processed_date }}</td>
+    </tr>
+  </table>
+
+  <!-- Footer -->
+  <p class="footer">NEUST-MIS-F013<br>Rev.0009.7.2020</p>
+
+</body>
+</html>

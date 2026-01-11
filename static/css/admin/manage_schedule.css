@@ -1,0 +1,286 @@
+/* ========== Base Layout (COMPACT) ========== */
+.content-area{
+  position:relative;
+  padding:16px;
+  font-family:Arial, sans-serif;
+  background:#f9f9f9;
+  color:#2c3e50;
+}
+.card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+
+/* ========== Buttons (COMPACT) ========== */
+.btn{
+  display:inline-flex;align-items:center;gap:8px;border:none;cursor:pointer;border-radius:9999px;
+  padding:6px 10px;
+  font-size:12.5px;
+  line-height:1.1;
+  transition:background .15s,color .15s,box-shadow .15s,transform .05s;
+  text-decoration:none!important;
+}
+.btn.primary{background:#0056b3;color:#fff;}
+.btn.primary:hover{background:#007bff;box-shadow:0 2px 8px rgba(2,132,199,.25);}
+.btn.ghost{background:#0056b3;color:#fff;}
+.btn.ghost:hover{background:#007bff;box-shadow:0 2px 10px rgba(15,23,42,.12);}
+.btn.green{background:#16a34a;color:#fff;}
+.btn.green:hover{background:#15803d;}
+.btn.red{background:#dc2626;color:#fff;}
+.btn.red:hover{background:#b91c1c;}
+.btn.sm{padding:4px 8px;font-size:11.5px;border-radius:10px;}
+.btn:active{transform:translateY(1px);}
+
+/* ========== Header & Week Nav (COMPACT) ========== */
+.schedule-header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;}
+.weekly-title{margin:0;}
+.schedule-toolbar{display:flex;gap:6px;}
+.week-navigation{display:flex;align-items:center;justify-content:space-between;margin:4px 0 8px;}
+.week-range{margin:0;font-size:15px;color:#1f2937;}
+.week-buttons{display:flex;gap:6px;}
+.week-buttons .btn{background:#0056b3;color:#fff;border:1px solid #dbe1ff;padding:6px 12px;font-weight:700;}
+.week-buttons .btn:hover{background:#0ea5e9;box-shadow:0 2px 10px rgba(30,41,59,.12);}
+
+/* ========== Lab Selector (no card container, exact screenshot style) ========== */
+.schedule-header + .card {
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+.schedule-header + .card form {
+  display:flex;align-items:center;gap:10px;
+}
+.schedule-header + .card label[for="lab_id"] {
+  font-weight:800;
+  color:#0f172a;
+  font-size:14px;
+  line-height:1.2;
+}
+.schedule-header + .card select#lab_id {
+  border:1px solid #cbd5e1;
+  border-radius:10px;
+  background-color:#fff;
+  height:36px;
+  width:200px; /* narrow width */
+  padding:0 36px 0 12px;
+  font-size:14px;
+  font-weight:600;
+  color:#0f172a;
+  appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%231f2937' stroke-width='1.75'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right 10px center;
+  background-size:16px;
+  transition:border-color .15s,box-shadow .15s;
+}
+.schedule-header + .card select#lab_id:hover {
+  border-color:#93c5fd;
+}
+.schedule-header + .card select#lab_id:focus {
+  outline:none;
+  border-color:#0b63d1;
+  box-shadow:0 0 0 3px rgba(11,99,209,0.15);
+}
+
+/* ========== Weekly Grid (COMPACT) ========== */
+.schedule-grid{overflow-x:auto;}
+.weekly-schedule{width:100%;border-collapse:collapse;table-layout:fixed;background:#fff;border-radius:12px;overflow:hidden;}
+.weekly-schedule thead th{
+  background:#0f172a;color:#fff;font-weight:700;padding:7px;
+  text-align:center;font-size:13px;
+}
+.weekly-schedule td,.weekly-schedule th{border:1px solid #e5e7eb;vertical-align:top;padding:7px;}
+.day-cell{min-width:140px;text-align:left;}
+
+/* Section headers inside each day cell */
+.cell-section{margin-bottom:8px;}
+.cell-title{
+  display:flex;align-items:center;gap:8px;margin:2px 0 4px;padding:0;
+  font-weight:900;font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:#0f172a;position:relative;
+}
+.cell-title::after{content:"";flex:1;height:0;border-bottom:2px solid #0ea5e9;opacity:.9;}
+.cell-title.alt::after{border-bottom-color:#f59e0b;}
+.cell-title.with-line span{font-weight:900;font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;color:#0f172a;}
+.cell-title.with-line i{display:block;flex:1;height:0;border-bottom:2px solid #0ea5e9;opacity:.9;}
+.cell-title.with-line.alt i{border-bottom-color:#f59e0b;}
+
+/* Mini table */
+.weekly-schedule.mini thead th{font-size:11.5px;padding:6px;}
+.weekly-schedule.mini td{padding:6px;vertical-align:top;}
+
+/* ========== Entry Blocks (COMPACT) ========== */
+.entry-block{
+  width:100%;
+  background:#eef5ff;border:1px solid #d9e6ff;border-radius:12px;
+  padding:5px 7px;margin-bottom:5px;
+  display:flex;flex-direction:column;gap:2px;
+}
+.entry-block.schedule{background:#e6f0ff;border-color:#cfe0ff;}
+.entry-block.request{background:#fff6e6;border-color:#ffe2b8;}
+.entry-block.active-session{background:#d4edda;border-left:6px solid #28a745;}
+.entry-block.is-clickable{cursor:pointer;}
+.entry-block .title,.eb-teacher{
+  font-weight:900;color:#0f172a;font-size:12px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;
+}
+.entry-block .meta,.eb-course{color:#334155;font-weight:700;letter-spacing:.2px;font-size:11px;width:100%;}
+.eb-time,.entry-block .meta.time{color:#334155;letter-spacing:.2px;font-size:9.5px;width:100%;font-weight:800;}
+.entry-block .remarks{margin-top:2px;font-size:12px;color:#64748b;}
+.entry-block.small{padding:4px 6px;border-radius:10px;gap:2px;}
+.entry-block.small .title,.entry-block.small .eb-teacher{font-size:11px;}
+.entry-block.small .eb-time{font-size:9px;font-weight:800;}
+.weekly-schedule.mini .entry-block.small .eb-time{font-size:9px;font-weight:800;}
+
+/* ========== MODALS (UNCHANGED except scrollbar fix) ========== */
+.content-area.modal-open{overflow:hidden;}
+.modal-overlay{
+  position:absolute;inset:0;z-index:1000;
+  display:none;align-items:center;justify-content:center;
+  padding:20px;pointer-events:auto;
+  backdrop-filter:blur(2px);
+  overflow:hidden !important; /* 👈 hide the outer scrollbar */
+}
+.modal-content{background:#fff;border-radius:12px;width:min(1100px,96%);border:1px solid #e5e7eb;box-shadow:0 20px 60px rgba(0,0,0,.25);position:relative;}
+.modal-header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 16px;border-bottom:1px solid #e5e7eb;background:#f8fafc;border-radius:12px 12px 0 0;}
+.modal-header h3{margin:0;font-size:16px;color:#111827;}
+.close-x{background:transparent;border:none;font-size:22px;cursor:pointer;color:#6b7280;}
+.modal-body{padding:16px;max-height:70vh;overflow:auto;}
+.modal-content.two-col .modal-body{display:grid;grid-template-columns:0.8fr 1.2fr;gap:16px;}
+
+/* Inner modal scrollbar style */
+.modal-body::-webkit-scrollbar,
+.modal-requests-body::-webkit-scrollbar {
+  width:6px;
+}
+.modal-body::-webkit-scrollbar-thumb,
+.modal-requests-body::-webkit-scrollbar-thumb {
+  background:#cbd5e1;
+  border-radius:10px;
+}
+.modal-body::-webkit-scrollbar-thumb:hover,
+.modal-requests-body::-webkit-scrollbar-thumb:hover {
+  background:#94a3b8;
+}
+
+/* Form */
+.schedule-form{display:flex;flex-direction:column;gap:8px;}
+.schedule-form label{font-weight:600;color:#1f2937;font-size:12px;margin-bottom:2px;display:block;}
+.schedule-form input[type="text"],
+.schedule-form input[type="number"],
+.schedule-form input[type="date"],
+.schedule-form input[type="time"],
+.schedule-form select{border:1px solid #cfd8e3;border-radius:8px;padding:6px 10px;font-size:13px;background:#fff;box-sizing:border-box;width:100%;}
+.checkbox-group{display:flex;flex-wrap:wrap;gap:6px 12px;background:#f9fafb;padding:8px;border-radius:10px;border:1px solid #e5e7eb;font-size:12px;}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:6px;}
+.modal-actions .btn{padding:6px 12px;font-size:13px;}
+
+/* Preview Pane */
+.preview-pane{display:flex;flex-direction:column;gap:8px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;}
+.preview-header{
+  position:sticky;top:0;z-index:4;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 12px;border-bottom:1px solid #e5e7eb;
+  background:#0f172a;color:#fff;border-radius:12px 12px 0 0;
+}
+.ph-title{font-weight:700;}
+.ph-range{font-size:12px;opacity:.9;}
+.preview-scroll{max-height:60vh;overflow:auto;padding:10px;background:#f8fafc;}
+
+/* Responsive */
+@media (max-width:960px){
+  .modal-content.two-col .modal-body{grid-template-columns:1fr;}
+  .preview-scroll{max-height:40vh;}
+  .schedule-header + .card form{flex-direction:column;align-items:flex-start;}
+  .schedule-header + .card select#lab_id{width:100%;}
+}
+
+/* Small additions */
+.form-subtitle{font-weight:700;margin:2px 0 6px;color:#0f172a;}
+.badge-count{display:inline-block;min-width:18px;padding:2px 8px;border-radius:9999px;background:#ef4444;color:#fff;font-size:12px;line-height:1;font-weight:700;}
+
+/* Toast */
+.toast{position:fixed;left:50%;bottom:20px;z-index:2000;min-width:240px;max-width:360px;padding:12px 14px;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.15);color:#0f172a;background:#ffffff;border:1px solid #e5e7eb;display:none;opacity:0;transform:translate(-50%,12px);transition:opacity .25s,transform .25s;font-size:14px;line-height:1.2;}
+.toast.show{display:block;opacity:1;transform:translate(-50%,0);}
+.toast.error{border-color:#fecaca;background:#fff1f2;color:#7f1d1d;}
+.toast.success{border-color:#bbf7d0;background:#ecfdf5;color:#065f46;}
+.toast.info{border-color:#bfdbfe;background:#eff6ff;color:#1e3a8a;}
+.toast.in-modal{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(420px,90%);z-index:3000;}
+
+/* Invalid states */
+.schedule-form .invalid{border-color:#ef4444!important;outline:none;box-shadow:0 0 0 3px rgba(239,68,68,.15);}
+.schedule-form .error-text{margin-top:4px;font-size:12px;color:#991b1b;}
+.checkbox-group.invalid{border-color:#ef4444!important;box-shadow:0 0 0 3px rgba(239,68,68,.15);}
+
+/* ====== View Requests modal table & filters ====== */
+#requestsOverlay .modal-content{border-radius:14px;width:min(1100px,96vw);max-width:96vw;}
+#requestsOverlay .modal-header{background:#f1f5f9;border-radius:14px 14px 0 0;}
+#requestsOverlay .modal-requests-body{padding:12px 14px;overflow-x:hidden;}
+#requestsOverlay .filters{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 10px;}
+#requestsOverlay .req-filter{background:#0b63d1;color:#fff;}
+#requestsOverlay .req-filter.active{background:#0e7aff;box-shadow:0 0 0 3px rgba(14,122,255,.2) inset;}
+#requestsOverlay .requests-table-wrap{overflow-y:auto;overflow-x:hidden;max-height:58vh;padding:0;border-radius:12px;width:100%;}
+#requestsOverlay table.weekly-schedule.compact{border-collapse:separate;border-spacing:0;table-layout:fixed;width:100%;min-width:0;font-size:12px;}
+#requestsOverlay .weekly-schedule.compact thead th{position:sticky;top:0;z-index:1;background:#0f172a;color:#fff;padding:9px 10px;font-weight:800;letter-spacing:.02em;}
+#requestsOverlay .weekly-schedule.compact th,
+#requestsOverlay .weekly-schedule.compact td{padding:9px 10px;border:1px solid #e5e7eb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;vertical-align:middle;}
+#requestsOverlay .weekly-schedule.compact tbody tr:nth-child(even) td{background:#f8fafc;}
+#requestsOverlay .weekly-schedule.compact td.actions-cell{white-space:nowrap;overflow:visible;padding-right:12px;}
+#requestsOverlay .actions-wrap{display:flex;align-items:center;justify-content:flex-start;gap:6px;flex-wrap:nowrap;}
+#requestsOverlay .actions-wrap .btn{margin:0;padding:4px 10px;font-size:12px;line-height:1.1;}
+#requestsOverlay .weekly-schedule.compact thead th:nth-child(1){width:14%;}
+#requestsOverlay .weekly-schedule.compact thead th:nth-child(2){width:7%;}
+#requestsOverlay .weekly-schedule.compact thead th:nth-child(3){width:10%;}
+#requestsOverlay .weekly-schedule.compact thead th:nth-child(4){width:12%;}
+#requestsOverlay .weekly-schedule.compact thead th:nth-child(5){width:8%;}
+#requestsOverlay .weekly-schedule.compact thead th:nth-child(6){width:8%;}
+#requestsOverlay .weekly-schedule.compact thead th:nth-child(7){width:11%;}
+#requestsOverlay .weekly-schedule.compact thead th:nth-child(8){width:7%;}
+#requestsOverlay .weekly-schedule.compact thead th:nth-child(9){width:9%;}
+#requestsOverlay .weekly-schedule.compact thead th:nth-child(10){width:14%;}
+@media (max-width:640px){
+  #requestsOverlay .modal-content{width:96vw!important;}
+  #requestsOverlay .weekly-schedule.compact th,
+  #requestsOverlay .weekly-schedule.compact td{padding:6px 8px;font-size:11.5px;}
+  #requestsOverlay .actions-wrap .btn{padding:4px 8px;font-size:11.5px;}
+}
+.dashboard-page h2 {
+    margin: 6px 0 10px;
+    font-size: 22px;
+    font-weight: 800;
+    color: #0f2454;
+}
+.lab-select .schedule-legend.inline{
+  display:flex;            /* horizontal row */
+  flex-direction:row;
+  gap:10px;
+  align-items:center;
+  margin-left:10px;
+  white-space:nowrap;      /* prevent line breaks */
+}
+
+.lab-select .schedule-legend.inline .legend-item{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  white-space:nowrap;      /* keep each pill on one line */
+}
+
+.schedule-legend .legend-item{
+  display:inline-flex; align-items:center; gap:6px;
+  font-size:12px; font-weight:700; color:#334155;
+}
+
+
+.schedule-legend .legend-swatch{
+  width:12px; height:12px; border-radius:3px; border:1px solid; display:inline-block;
+}
+
+/* match your existing card colors */
+.schedule-legend .legend-swatch.sched{  background:#e6f0ff; border-color:#cfe0ff; }   /* Scheduled */
+.schedule-legend .legend-swatch.req{    background:#fff6e6; border-color:#ffe2b8; }   /* Request */
+.schedule-legend .legend-swatch.active{ background:#d4edda; border-color:#28a745; }   /* Active session */
+
+/* On narrow widths, let it wrap under the select without breaking layout */
+@media (max-width: 640px){
+  .lab-select .schedule-legend.inline{ margin-left:0; }
+}

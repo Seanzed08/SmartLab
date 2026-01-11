@@ -1,0 +1,216 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Profile | NEUST</title>
+  <link rel="stylesheet" href="{% static 'css/admin/admin-style.css' %}">
+  <style>
+    :root{
+      --bg: #f6f7fb;
+      --card: #ffffff;
+      --muted: #6b7280;
+      --text: #111827;
+      --primary: #2563eb;
+      --primary-hover:#1e40af;
+      --ring: rgba(37, 99, 235, .15);
+      --border:#e5e7eb;
+    }
+
+    body { background: var(--bg); color: var(--text); }
+
+    .container { padding: 24px; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      gap: 20px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: 0 1px 2px rgba(0,0,0,.04);
+    }
+
+    .card-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .card-header h3 { margin: 0; font-size: 16px; font-weight: 700; }
+
+    .card-body { padding: 18px; }
+
+    .photo-wrap {
+      display: flex; flex-direction: column; align-items: center; gap: 12px;
+    }
+
+    .profile-photo {
+      width: 120px; height: 120px; border-radius: 999px; object-fit: cover;
+      border: 3px solid #fff; box-shadow: 0 3px 12px rgba(0,0,0,.08);
+    }
+
+    .file-input {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      background: #fafafa;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .form {
+      display: grid; gap: 12px;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .full { grid-column: 1 / -1; }
+
+    label { font-weight: 600; font-size: 13px; color: #374151; }
+
+    input[type="text"], input[type="email"], input[type="password"] {
+      width: 100%; padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px; background: #fff; color: var(--text);
+      outline: none; transition: box-shadow .2s, border-color .2s;
+      font-size: 14px;
+    }
+    input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--ring);
+    }
+
+    .hint { font-size: 11px; color: var(--muted); }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 10px 14px; border: none; border-radius: 8px;
+      background: var(--primary); color: #fff; font-weight: 600;
+      cursor: pointer; transition: background .2s, transform .02s;
+      font-size: 14px;
+    }
+    .btn:hover { background: var(--primary-hover); }
+    .btn:active { transform: translateY(1px); }
+
+    .badge {
+      display: inline-block; padding: 4px 8px; border-radius: 999px;
+      background: #eef2ff; color: #4338ca; font-weight: 600; font-size: 12px;
+      border: 1px solid #e0e7ff;
+    }
+
+    .readonly-box {
+      padding: 10px 12px; background: #f9fafb; border: 1px dashed var(--border);
+      border-radius: 8px; color: #111827; font-weight: 600; font-size: 14px;
+    }
+
+    /* TOAST */
+    .toast-wrap{
+      position: fixed; inset: auto 0 24px 0;
+      display: grid; place-items: center;
+      pointer-events: none; z-index: 4000;
+    }
+    .toast{
+      min-width: 280px; max-width: 92vw;
+      background:#0f172a; color:#e2e8f0;
+      border-radius:14px; box-shadow:0 20px 60px rgba(2,8,23,.35);
+      padding:12px 16px; display:grid; grid-template-columns:22px auto; gap:10px; align-items:center;
+      transform: translateY(16px); opacity:0;
+      transition: transform .18s ease-out, opacity .18s ease-out;
+      pointer-events:auto;
+    }
+    .toast.show{ transform:translateY(0); opacity:1 }
+    .toast .t-icon{
+      width:22px; height:22px; border-radius:999px;
+      background:#16a34a; display:grid; place-items:center; color:#0f172a; font-weight:800;
+    }
+    .toast.error .t-icon{ background:#dc2626 }
+    .toast .t-msg{ font-size:14px; line-height:1.35 }
+  </style>
+</head>
+<body>
+<div class="dashboard-container">
+  {% include 'includes/sidebar.html' %}
+
+  <div class="main-panel">
+    {% include 'includes/header.html' %}
+
+    <section class="container">
+      <div class="card">
+        <div class="card-header">
+          <h3>My Profile</h3>
+        </div>
+        <div class="card-body">
+          <div class="grid">
+            <!-- Left: Photo -->
+            <div class="card">
+              <div class="card-header"><h3>Photo</h3></div>
+              <div class="card-body">
+                <div class="photo-wrap">
+                  <img
+                    src="{% if profile_image %}{{ MEDIA_URL }}{{ profile_image }}{% else %}{% static 'img/admin-icon.png' %}{% endif %}"
+                    class="profile-photo"
+                    alt="Admin Profile Image"
+                  />
+                  <input class="file-input" type="file" name="profile_image" form="profile-form" accept="image/*">
+                  <div class="hint">PNG or JPG, max ~2–3 MB.</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Form -->
+            <div class="card">
+              <div class="card-header"><h3>Details</h3></div>
+              <div class="card-body">
+                <form id="profile-form" method="POST" enctype="multipart/form-data" class="form">
+                  {% csrf_token %}
+                  <div class="field"><label>First Name</label>
+                    <input type="text" name="first_name" value="{{ first_name }}" required></div>
+                  <div class="field"><label>Middle Name</label>
+                    <input type="text" name="middle_name" value="{{ middle_name }}"></div>
+                  <div class="field"><label>Last Name</label>
+                    <input type="text" name="last_name" value="{{ last_name }}" required></div>
+                  <div class="field"><label>Email</label>
+                    <input type="email" name="email" value="{{ email }}" required></div>
+                  <div class="field full"><label>Password
+                    <span class="hint">(Leave blank to keep current)</span></label>
+                    <input type="password" name="password" placeholder="••••••••••"></div>
+                  <div class="field"><label>Role</label>
+                    <div class="readonly-box"><span class="badge">{{ role|default:"—" }}</span></div>
+                  </div>
+                  <div class="field"><label>RFID</label>
+                    <div class="readonly-box">{{ rfid|default:"—" }}</div>
+                  </div>
+                  <div class="field full"><button type="submit" class="btn">Update</button></div>
+                </form>
+              </div>
+            </div>
+          </div> <!-- /grid -->
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- Toast -->
+{% if profile_toast %}
+<div class="toast-wrap">
+  <div class="toast {% if profile_toast.level == 'error' %}error{% endif %} show" id="toast">
+    <div class="t-icon">{% if profile_toast.level == 'error' %}!{% else %}✓{% endif %}</div>
+    <div class="t-msg">{{ profile_toast.text }}</div>
+  </div>
+</div>
+<script>
+  setTimeout(()=> {
+    const t = document.getElementById("toast");
+    if(t){ t.classList.remove("show"); }
+  }, 3500);
+</script>
+{% endif %}
+</body>
+</html>

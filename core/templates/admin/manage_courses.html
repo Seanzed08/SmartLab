@@ -1,0 +1,649 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Manage Courses & Semesters | NEUST Admin</title>
+  <link rel="stylesheet" href="{% static 'css/admin/admin-style.css' %}" />
+  <link rel="stylesheet" href="{% static 'css/admin/manage-courses.css' %}" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;600;700;800&display=swap" rel="stylesheet" />
+</head>
+<body class="dashboard-page">
+  <div class="dashboard-container">
+    {% include 'includes/sidebar.html' %}
+
+    <div class="main-panel">
+      {% include 'includes/header.html' %}
+
+      <section class="content-area">
+        <h2>Manage Courses & Semesters</h2>
+
+        <!-- Top controls -->
+        <div class="top-action-bar">
+          <div class="action-left">
+            <div class="archive-toggle">
+              {% if archived_only %}
+                <a href="{% url 'manage_courses' %}{% if q %}?q={{ q|urlencode }}{% endif %}" class="btn btn-primary btn-sm">Show Active</a>
+              {% else %}
+                <a href="{% url 'manage_courses' %}?archived=1{% if q %}&q={{ q|urlencode }}{% endif %}" class="btn btn-secondary btn-sm">Show Archived</a>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="search-wrap">
+            <form method="get" aria-label="Search courses">
+              {% if archived_only %}
+                <input type="hidden" name="archived" value="1">
+              {% endif %}
+              <input
+                type="text"
+                name="q"
+                class="search-input"
+                placeholder="Search course code or name…"
+                value="{{ q|default_if_none:'' }}"
+                autocomplete="off"
+              />
+              <button type="submit" class="btn btn-primary btn-sm">Search</button>
+ 
+            </form>
+          </div>
+        </div>
+
+        <!-- PROGRAMS -->
+        <div class="panel programs-panel" style="margin-bottom:18px;">
+          <div class="panel-header">
+            <h3>Programs {% if archived_only %}<span class="view-badge">Archived</span>{% endif %}</h3>
+            {% if not archived_only %}
+              <button class="btn btn-add btn-sm" id="btnAddProgram">+ Add Program</button>
+            {% endif %}
+          </div>
+
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Program</th>
+                  <th style="width:140px;">Status</th>
+                  <th style="width:300px;">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for p in programs %}
+                  <tr>
+                    <td class="ellipsis">
+                      <span class="program-pill"><small>{{ p.code }}</small> {{ p.name }}</span>
+                    </td>
+                    <td class="nowrap">
+                      {% if p.active %}
+                        <span class="status-pill active">Active</span>
+                      {% else %}
+                        <span class="status-pill past">Inactive</span>
+                      {% endif %}
+                    </td>
+                    <td class="actions">
+                      {% if not archived_only %}
+                        <button
+                          class="btn btn-edit btn-sm"
+                          data-edit-url="{% url 'edit_program' p.id %}"
+                          data-code="{{ p.code|escapejs }}"
+                          data-name="{{ p.name|escapejs }}"
+                          data-status="{% if p.active %}active{% else %}inactive{% endif %}"
+                          onclick="openEditProgram(this)"
+                        >Edit</button>
+
+                        {% if p.can_hard_delete %}
+                          <a href="{% url 'hard_delete_program' p.id %}?next={{ request.get_full_path|urlencode }}"
+                             class="btn btn-delete btn-sm needs-confirm-link"
+                             data-confirm="Delete program {{ p.code }} — {{ p.name }} permanently? This cannot be undone."
+                             data-ok="Delete">Delete</a>
+                        {% else %}
+                          <button class="btn btn-delete btn-sm is-blocked" disabled
+                                  title="Cannot delete: active and used by courses.">
+                            Delete
+                          </button>
+                        {% endif %}
+                      {% else %}
+                        <a href="{% url 'restore_program' p.id %}?next={{ request.get_full_path|urlencode }}"
+                           class="btn btn-add btn-sm needs-confirm-link"
+                           data-confirm="Restore program {{ p.code }} — {{ p.name }}?"
+                           data-ok="Restore">Restore</a>
+
+                        {% if p.can_hard_delete %}
+                          <a href="{% url 'hard_delete_program' p.id %}?next={{ request.get_full_path|urlencode }}"
+                             class="btn btn-delete btn-sm needs-confirm-link"
+                             data-confirm="Delete program {{ p.code }} — {{ p.name }} permanently? This cannot be undone."
+                             data-ok="Delete">Delete</a>
+                        {% else %}
+                          <button class="btn btn-delete btn-sm is-blocked" disabled
+                                  title="Cannot delete right now.">
+                            Delete
+                          </button>
+                        {% endif %}
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% empty %}
+                  <tr><td colspan="3" class="muted">No programs found.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- COURSES -->
+        <div class="panel">
+          <div class="panel-header">
+            <h3>Courses {% if archived_only %}<span class="view-badge">Archived</span>{% endif %}</h3>
+            {% if not archived_only %}
+              <button class="btn btn-add btn-sm" id="btnAddCourse2">+ Add Course</button>
+            {% endif %}
+          </div>
+
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Course Code</th>
+                  <th>Course Name</th>
+                  <th>Program</th>
+                  <th style="width:260px;">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+              {% if courses %}
+                {% for c in courses %}
+                  <tr>
+                    <td class="ellipsis">{{ c.code }}</td>
+                    <td class="ellipsis">{{ c.name }}</td>
+                    <td class="ellipsis">
+                      {% if c.program_code or c.program_name %}
+                        <span class="program-pill"><small>{{ c.program_code|default_if_none:'' }}</small> {{ c.program_name|default_if_none:'' }}</span>
+                      {% else %}
+                        <span class="muted">—</span>
+                      {% endif %}
+                    </td>
+                    <td class="actions">
+                      {% if not archived_only %}
+                        <button
+                          class="btn btn-edit btn-sm"
+                          data-edit-url="{% url 'edit_course' c.id %}"
+                          data-code="{{ c.code|escapejs }}"
+                          data-name="{{ c.name|escapejs }}"
+                          data-program-id="{{ c.program_id|default_if_none:'' }}"
+                          data-status="{% if c.is_active %}active{% else %}inactive{% endif %}"
+                          onclick="openEditCourse(this)"
+                        >Edit</button>
+
+                        {% if c.can_hard_delete %}
+                          <a href="{% url 'hard_delete_course' c.id %}?next={{ request.get_full_path|urlencode }}"
+                             class="btn btn-delete btn-sm needs-confirm-link"
+                             data-confirm="Delete {{ c.code }} — {{ c.name }} permanently? This cannot be undone."
+                             data-ok="Delete">Delete</a>
+                        {% else %}
+                          <button class="btn btn-delete btn-sm is-blocked" disabled
+                                  title="Cannot delete: active and currently in use.">
+                            Delete
+                          </button>
+                        {% endif %}
+                      {% else %}
+                        <a href="{% url 'restore_course' c.id %}?next={{ request.get_full_path|urlencode }}"
+                           class="btn btn-add btn-sm needs-confirm-link"
+                           data-confirm="Restore {{ c.code }} — {{ c.name }}?"
+                           data-ok="Restore">Restore</a>
+
+                        {% if c.can_hard_delete %}
+                          <a href="{% url 'hard_delete_course' c.id %}?next={{ request.get_full_path|urlencode }}"
+                             class="btn btn-delete btn-sm needs-confirm-link"
+                             data-confirm="Delete {{ c.code }} — {{ c.name }} permanently? This cannot be undone."
+                             data-ok="Delete">Delete</a>
+                        {% else %}
+                          <button class="btn btn-delete btn-sm is-blocked" disabled
+                                  title="Cannot delete right now.">
+                            Delete
+                          </button>
+                        {% endif %}
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              {% else %}
+                <tr><td colspan="4">No courses found.</td></tr>
+              {% endif %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- SEMESTERS -->
+        <div class="panel">
+          <div class="panel-header">
+            <h3>Semesters {% if archived_only %}<span class="view-badge">Archived</span>{% endif %}</h3>
+            {% if not archived_only %}
+              <button class="btn btn-add btn-sm" id="btnAddSemester">+ Add Semester</button>
+            {% endif %}
+          </div>
+
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Term</th>
+                  <th>School Year</th>
+                  <th>Start</th>
+                  <th>End</th>
+                  <th>Status</th>
+                  <th style="width:300px;">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+              {% for s in semesters %}
+                <tr>
+                  <td class="ellipsis">{{ s.term }}</td>
+                  <td class="ellipsis">{{ s.school_year }}</td>
+                  <td class="nowrap">{{ s.start_date|date:'Y-m-d' }}</td>
+                  <td class="nowrap">{{ s.end_date|date:'Y-m-d' }}</td>
+                  <td>
+                    <span class="status-pill
+                      {% if s.status|lower == 'active' %}active{% elif s.status|lower == 'upcoming' %}upcoming{% else %}past{% endif %}">
+                      {{ s.status }}
+                    </span>
+                  </td>
+                  <td class="actions">
+                    {% if not archived_only %}
+                      <button
+                        class="btn btn-edit btn-sm"
+                        data-edit-url="{% url 'edit_semester' s.id %}"
+                        data-term="{{ s.term }}"
+                        data-sy="{{ s.school_year }}"
+                        data-start="{{ s.start_date|date:'Y-m-d' }}"
+                        data-end="{{ s.end_date|date:'Y-m-d' }}"
+                        data-status="{% if s.is_active %}active{% else %}inactive{% endif %}"
+                        onclick="openEditSemester(this)"
+                      >Edit</button>
+
+                      {% if s.can_hard_delete %}
+                        <a href="{% url 'hard_delete_semester' s.id %}?next={{ request.get_full_path|urlencode }}"
+                           class="btn btn-delete btn-sm needs-confirm-link"
+                           data-confirm="Delete {{ s.term }} {{ s.school_year }} permanently? This cannot be undone."
+                           data-ok="Delete">Delete</a>
+                      {% else %}
+                        <button class="btn btn-delete btn-sm is-blocked" disabled
+                                title="Cannot delete: active and in use.">
+                          Delete
+                        </button>
+                      {% endif %}
+                    {% else %}
+                      <a href="{% url 'restore_semester' s.id %}?next={{ request.get_full_path|urlencode }}"
+                         class="btn btn-add btn-sm needs-confirm-link"
+                         data-confirm="Restore {{ s.term }} {{ s.school_year }}?"
+                         data-ok="Restore">Restore</a>
+
+                      {% if s.can_hard_delete %}
+                        <a href="{% url 'hard_delete_semester' s.id %}?next={{ request.get_full_path|urlencode }}"
+                           class="btn btn-delete btn-sm needs-confirm-link"
+                           data-confirm="Delete {{ s.term }} {{ s.school_year }} permanently? This cannot be undone."
+                           data-ok="Delete">Delete</a>
+                      {% else %}
+                        <button class="btn btn-delete btn-sm is-blocked" disabled
+                                title="Cannot delete right now.">
+                          Delete
+                        </button>
+                      {% endif %}
+                    {% endif %}
+                  </td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="6">No semesters found.</td></tr>
+              {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Add/Edit modals (same as your latest; unchanged except values filled via JS) -->
+  <!-- Add Course Modal -->
+  <div id="addCourseModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="addCourseTitle">
+    <div class="modal-content">
+      <button class="modal-close" onclick="closeAddCourse()" aria-label="Close">×</button>
+      <h3 id="addCourseTitle">Add Course</h3>
+      <form method="POST" action="{% url 'add_course' %}">
+        {% csrf_token %}
+        <div class="form-grid-2">
+          <div class="form-group" style="grid-column:1 / -1;">
+            <label>Program</label>
+            <select class="program-select" name="program_id">
+              <option value="">— No Program —</option>
+              {% for p in programs_all_for_select %}
+                {% if p.active %}
+                  <option value="{{ p.id }}">{{ p.code }} — {{ p.name }}</option>
+                {% else %}
+                  <option value="{{ p.id }}" disabled>{{ p.code }} — {{ p.name }} (Inactive)</option>
+                {% endif %}
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group"><label>Course Code</label><input type="text" name="course_code" required></div>
+          <div class="form-group"><label>Course Name</label><input type="text" name="course_name" required></div>
+          
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeAddCourse()">Cancel</button>
+          <button type="submit" class="btn btn-add">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Course Modal -->
+  <div id="editCourseModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="editCourseTitle">
+    <div class="modal-content">
+      <button class="modal-close" onclick="closeEditCourse()" aria-label="Close">×</button>
+      <h3 id="editCourseTitle">Edit Course</h3>
+      <form method="POST" id="editCourseForm">
+        {% csrf_token %}
+        <div class="form-grid-2">
+          <div class="form-group"><label>Course Code</label><input type="text" name="course_code" id="editCourseCode" required></div>
+          <div class="form-group"><label>Course Name</label><input type="text" name="course_name" id="editCourseName" required></div>
+          <div class="form-group" style="grid-column:1 / -1;">
+            <label>Program (optional)</label>
+            <select class="program-select" name="program_id" id="editProgramSelect">
+              <option value="">— No Program —</option>
+              {% for p in programs_all_for_select %}
+                {% if p.active %}
+                  <option value="{{ p.id }}">{{ p.code }} — {{ p.name }}</option>
+                {% else %}
+                  <option value="{{ p.id }}" disabled>{{ p.code }} — {{ p.name }} (Inactive)</option>
+                {% endif %}
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group" style="grid-column:1 / -1;">
+            <label>Status</label>
+            <select name="status" id="editCourseStatus" required>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+            <div class="form-help">Your database may or may not use this field.</div>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeEditCourse()">Cancel</button>
+          <button type="submit" class="btn btn-edit">Update</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add Semester Modal -->
+  <div id="addSemesterModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="addSemesterTitle">
+    <div class="modal-content">
+      <button class="modal-close" onclick="closeAddSemester()" aria-label="Close">×</button>
+      <h3 id="addSemesterTitle">Add Semester</h3>
+      <form method="POST" action="{% url 'add_semester' %}">
+        {% csrf_token %}
+        <div class="form-grid-2">
+          <div class="form-group"><label>Term</label><input type="text" name="term" required></div>
+          <div class="form-group"><label>School Year</label><input type="text" name="school_year" required></div>
+          <div class="form-group"><label>Start Date</label><input type="date" name="start_date" required></div>
+          <div class="form-group"><label>End Date</label><input type="date" name="end_date" required></div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeAddSemester()">Cancel</button>
+          <button type="submit" class="btn btn-add">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Semester Modal -->
+  <div id="editSemesterModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="editSemesterTitle">
+    <div class="modal-content">
+      <button class="modal-close" onclick="closeEditSemester()" aria-label="Close">×</button>
+      <h3 id="editSemesterTitle">Edit Semester</h3>
+      <form method="POST" id="editSemesterForm">
+        {% csrf_token %}
+        <div class="form-grid-2">
+          <div class="form-group"><label>Term</label><input type="text" name="term" id="editTerm" required></div>
+          <div class="form-group"><label>School Year</label><input type="text" name="school_year" id="editSY" required></div>
+          <div class="form-group"><label>Start Date</label><input type="date" name="start_date" id="editStart" required></div>
+          <div class="form-group"><label>End Date</label><input type="date" name="end_date" id="editEnd" required></div>
+          <div class="form-group" style="grid-column:1 / -1;">
+            <label>Status</label>
+            <select name="status" id="editSemesterStatus" required>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+            <div class="form-help">Your database may or may not use this field.</div>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeEditSemester()">Cancel</button>
+          <button type="submit" class="btn btn-edit">Update</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add Program Modal -->
+  <div id="addProgramModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="addProgramTitle">
+    <div class="modal-content">
+      <button class="modal-close" onclick="closeAddProgram()" aria-label="Close">×</button>
+      <h3 id="addProgramTitle">Add Program</h3>
+      <form method="POST" action="{% url 'add_program' %}">
+        {% csrf_token %}
+        <div class="form-grid-2">
+          <div class="form-group"><label>Program Code</label><input type="text" name="program_code" required></div>
+          <div class="form-group"><label>Program Name</label><input type="text" name="program_name" required></div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeAddProgram()">Cancel</button>
+          <button type="submit" class="btn btn-add">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Program Modal -->
+  <div id="editProgramModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="editProgramTitle">
+    <div class="modal-content">
+      <button class="modal-close" onclick="closeEditProgram()" aria-label="Close">×</button>
+      <h3 id="editProgramTitle">Edit Program</h3>
+      <form method="POST" id="editProgramForm">
+        {% csrf_token %}
+        <div class="form-grid-2">
+          <div class="form-group"><label>Program Code</label><input type="text" name="program_code" id="editProgramCode" required></div>
+          <div class="form-group"><label>Program Name</label><input type="text" name="program_name" id="editProgramName" required></div>
+        </div>
+        <div class="form-group" style="margin-top:8px;">
+          <label>Status</label>
+          <select name="status" id="editProgramStatus" required>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+          <div class="form-help">Your database may or may not use this field.</div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeEditProgram()">Cancel</button>
+          <button type="submit" class="btn btn-edit">Update</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Confirm Modal -->
+  <div id="confirmBackdrop" class="cmodal-backdrop" hidden></div>
+  <div id="confirmModal" class="cmodal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle" hidden>
+    <div class="cmodal-card" role="document">
+      <button type="button" class="cmodal-x" id="cX" aria-label="Close">×</button>
+      <h3 id="confirmTitle">Please confirm</h3>
+      <p id="confirmMessage">Are you sure?</p>
+      <div class="cmodal-actions">
+        <button type="button" class="btn btn-secondary btn-sm" id="cCancel">Cancel</button>
+        <button type="button" class="btn btn-delete btn-sm" id="cOk">Yes, proceed</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Django messages (hidden, for toast) -->
+  {% if messages %}
+    <div id="django-messages" style="display:none">
+      {% for m in messages %}
+        <div class="djmsg" data-tags="{{ m.tags }}" data-text="{{ m|escapejs }}"></div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <!-- Toast -->
+  <div class="toast-wrap" aria-live="polite" aria-atomic="true">
+    <div id="appToast" class="toast" role="status" hidden>
+      <div class="t-icon">✓</div>
+      <div class="t-msg">Saved successfully.</div>
+    </div>
+  </div>
+
+  <script>
+    // -------- Courses modals --------
+    function openAddCourse(){ document.getElementById('addCourseModal').classList.add('show'); }
+    function closeAddCourse(){ document.getElementById('addCourseModal').classList.remove('show'); }
+    function openEditCourse(btn){
+      const url = btn.getAttribute('data-edit-url') || '#';
+      document.getElementById('editCourseCode').value = btn.getAttribute('data-code') || '';
+      document.getElementById('editCourseName').value = btn.getAttribute('data-name') || '';
+      document.getElementById('editCourseForm').action = url;
+      const pid = btn.getAttribute('data-program-id') || '';
+      const sel = document.getElementById('editProgramSelect');
+      if (sel){ sel.value = pid; }
+      const st = btn.getAttribute('data-status') || 'active';
+      const sSel = document.getElementById('editCourseStatus');
+      if (sSel){ sSel.value = st; }
+      document.getElementById('editCourseModal').classList.add('show');
+    }
+    function closeEditCourse(){ document.getElementById('editCourseModal').classList.remove('show'); }
+
+    // -------- Semesters modals --------
+    function openAddSemester(){ document.getElementById('addSemesterModal').classList.add('show'); }
+    function closeAddSemester(){ document.getElementById('addSemesterModal').classList.remove('show'); }
+    function openEditSemester(btn){
+      const url = btn.getAttribute('data-edit-url') || '#';
+      document.getElementById('editTerm').value  = btn.getAttribute('data-term') || '';
+      document.getElementById('editSY').value    = btn.getAttribute('data-sy') || '';
+      document.getElementById('editStart').value = btn.getAttribute('data-start') || '';
+      document.getElementById('editEnd').value   = btn.getAttribute('data-end') || '';
+      const st = btn.getAttribute('data-status') || 'active';
+      document.getElementById('editSemesterStatus').value = st;
+      document.getElementById('editSemesterForm').action = url;
+      document.getElementById('editSemesterModal').classList.add('show');
+    }
+    function closeEditSemester(){ document.getElementById('editSemesterModal').classList.remove('show'); }
+
+    // -------- Programs modals --------
+    function openAddProgram(){ document.getElementById('addProgramModal').classList.add('show'); }
+    function closeAddProgram(){ document.getElementById('addProgramModal').classList.remove('show'); }
+    function openEditProgram(btn){
+      const url = btn.getAttribute('data-edit-url') || '#';
+      document.getElementById('editProgramForm').action = url;
+      document.getElementById('editProgramCode').value = btn.getAttribute('data-code') || '';
+      document.getElementById('editProgramName').value = btn.getAttribute('data-name') || '';
+      const st = btn.getAttribute('data-status') || 'active';
+      document.getElementById('editProgramStatus').value = st;
+      document.getElementById('editProgramModal').classList.add('show');
+    }
+    function closeEditProgram(){ document.getElementById('editProgramModal').classList.remove('show'); }
+
+    // Header buttons
+    document.getElementById('btnAddCourse')?.addEventListener('click', openAddCourse);
+    document.getElementById('btnAddCourse2')?.addEventListener('click', openAddCourse);
+    document.getElementById('btnAddSemester')?.addEventListener('click', openAddSemester);
+    document.getElementById('btnAddProgram')?.addEventListener('click', openAddProgram);
+
+    // Backdrop click to close modals
+    window.addEventListener('click', (e) => {
+      ['addCourseModal','editCourseModal','addSemesterModal','editSemesterModal','addProgramModal','editProgramModal'].forEach(id => {
+        const m = document.getElementById(id);
+        if (e.target === m) m.classList.remove('show');
+      });
+    });
+
+    // Confirm dialog for links with .needs-confirm-link
+    (function(){
+      const backdrop = document.getElementById('confirmBackdrop');
+      const modal    = document.getElementById('confirmModal');
+      const titleEl  = document.getElementById('confirmTitle');
+      const msgEl    = document.getElementById('confirmMessage');
+      const okBtn    = document.getElementById('cOk');
+      const cancelBtn= document.getElementById('cCancel');
+      const xBtn     = document.getElementById('cX');
+
+      function openConfirm(message, opts = {}){
+        titleEl.textContent = opts.title || 'Please confirm';
+        msgEl.textContent   = message || 'Are you sure?';
+        okBtn.textContent   = opts.okText || 'OK';
+        okBtn.classList.remove('btn-delete', 'btn-add', 'btn-restore');
+        const label = okBtn.textContent.trim().toLowerCase();
+        if (label.includes('delete')) { okBtn.classList.add('btn-delete'); }
+        else if (label.includes('restore')) { okBtn.classList.add('btn-restore'); }
+        else { okBtn.classList.add('btn-add'); }
+        backdrop.hidden = false; modal.hidden = false; document.body.style.overflow = 'hidden';
+      }
+      function closeConfirm(){
+        backdrop.hidden = true; modal.hidden = true; document.body.style.overflow = '';
+        okBtn.onclick = cancelBtn.onclick = xBtn.onclick = null;
+        backdrop.onclick = null;
+      }
+
+      document.addEventListener('click', (e) => {
+        const link = e.target.closest('a.needs-confirm-link');
+        if (!link) return;
+        e.preventDefault();
+        const href    = link.getAttribute('href');
+        const message = link.dataset.confirm || 'Are you sure?';
+        const okText  = link.dataset.ok || 'OK';
+        const title   = link.dataset.title || 'Please confirm';
+        openConfirm(message, { title, okText });
+        okBtn.onclick     = () => { closeConfirm(); window.location.href = href; };
+        cancelBtn.onclick = closeConfirm;
+        xBtn.onclick      = closeConfirm;
+        backdrop.onclick  = closeConfirm;
+      });
+    })();
+
+    // Toasts (Django messages)
+    function showToast(message, opts){
+      opts = opts || {};
+      var type = opts.type === 'error' ? 'error' : 'success';
+      var timeout = typeof opts.timeout === 'number' ? opts.timeout : 2400;
+
+      var t = document.getElementById('appToast');
+      if (!t) return;
+      var msgEl = t.querySelector('.t-msg');
+      var iconEl = t.querySelector('.t-icon');
+
+      msgEl.textContent = message || '';
+      if (type === 'error') { t.classList.add('error'); iconEl.textContent = '!'; }
+      else { t.classList.remove('error'); iconEl.textContent = '✓'; }
+
+      t.hidden = false;
+      requestAnimationFrame(function(){ t.classList.add('show'); });
+      clearTimeout(t._timer);
+      t._timer = setTimeout(function(){
+        t.classList.remove('show');
+        setTimeout(function(){ t.hidden = true; }, 180);
+      }, timeout);
+    }
+    (function(){
+      var box = document.getElementById('django-messages');
+      if (!box) return;
+      var items = box.querySelectorAll('.djmsg');
+      for (var i = 0; i < items.length; i++) {
+        var text = items[i].getAttribute('data-text') || '';
+        var tags = items[i].getAttribute('data-tags') || '';
+        var isError = (tags.indexOf('error') > -1) || (tags.indexOf('warning') > -1);
+        showToast(text, { type: isError ? 'error' : 'success' });
+      }
+    })();
+  </script>
+</body>
+</html>

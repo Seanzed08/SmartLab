@@ -1,0 +1,110 @@
+/* Topbar */
+.topbar{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:16px 24px;border-bottom:1px solid #d6d6d6;background:#fff;
+  position:sticky;top:0;z-index:1000;
+}
+.topbar .user-info{display:flex;align-items:center;gap:14px;font:700 18px/1 'Poppins',sans-serif;color:#002060}
+.topbar .admin-icon{border:2px solid #F6BE00;box-shadow:0 0 8px rgba(246,190,0,.5)}
+
+.notif-wrapper{position:relative}
+.notif-icon{font-size:26px;color:#002060cc;cursor:pointer;transition:transform .15s ease,color .2s}
+.notif-icon:hover{transform:scale(1.05);color:#F6BE00}
+.notif-badge{
+  position:absolute;top:-6px;right:-8px;background:#ef4444;color:#fff;
+  font-size:11px;font-weight:700;padding:2px 6px;border-radius:999px;box-shadow:0 0 3px rgba(0,0,0,.2)
+}
+
+/* Dropdown card */
+.notif-dropdown{
+  display:none;position:fixed;width:380px;max-width:calc(100vw - 32px);
+  right:24px;top:76px;background:#fff;border-radius:14px;border:1px solid #eef0f3;
+  box-shadow:0 20px 40px rgba(0,0,0,.18);z-index:1001;overflow:hidden
+}
+.notif-dropdown.collapsed{height:45vh}
+.notif-dropdown.expanded{height:70vh}
+
+/* Header strip */
+.notif-header{
+  position:sticky;top:0;z-index:1;display:flex;align-items:center;justify-content:space-between;
+  padding:10px 14px;border-bottom:1px solid #e7ebf1;background:#002060;color:#fff;font-weight:700;
+  border-top-left-radius:14px;border-top-right-radius:14px
+}
+
+/* Scroll body */
+.notif-body{height:calc(100% - 50px - 64px);overflow-y:auto;position:relative;background:#fff}
+.notif-dropdown.collapsed .notif-body::after{
+  content:"";position:sticky;bottom:0;height:28px;display:block;pointer-events:none;
+  background:linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,1))
+}
+
+/* Footer */
+.notif-footer{position:sticky;bottom:0;background:#fff;border-top:1px solid #eef0f3;padding:10px}
+.footer-actions{display:flex;gap:8px;justify-content:flex-end}
+.btn-primary{
+  padding:10px 14px;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;border:1px solid transparent;
+  background:#F6BE00;color:#002060
+}
+.btn-primary:hover{filter:brightness(.98)}
+.hidden{display:none !important}
+
+/* List + items */
+.notif-list{list-style:none;margin:0;padding:0}
+.notif-item{border-bottom:1px solid #f3f3f3;background:#fff}
+.notif-item:last-child{border-bottom:none}
+
+.notif-row{
+  display:grid;grid-template-columns:20px 1fr auto;gap:10px;align-items:center;
+  padding:12px 14px;cursor:pointer;transition:background-color .15s ease
+}
+.notif-row:hover{background:#f7f9fc}
+.notif-item.unread .notif-row{background:rgba(0,32,96,.055)}
+.notif-item.unread .message{font-weight:700}
+
+/* Dot indicator */
+.dot{
+  width:10px;height:10px;border-radius:999px;background:#F6BE00;
+  box-shadow:0 0 0 3px rgba(246,190,0,.15)
+}
+.notif-item.unread .dot{background:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.18)}
+
+/* Content */
+.content{display:flex;flex-direction:column;gap:4px;min-width:0}
+.message{
+  color:#1f2937;font-size:14px;line-height:1.35;overflow:hidden;text-overflow:ellipsis;
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;
+  line-clamp:2;max-lines:2;-ms-text-overflow:ellipsis
+}
+.timestamp{color:#6b7280;font-size:12px}
+
+/* Chevron */
+.chev{color:#9aa3af;font-size:20px;transform:translateX(0);transition:transform .15s ease}
+.notif-row:hover .chev{transform:translateX(2px)}
+
+/* Empty */
+.no-notifs{padding:20px;text-align:center;color:#94a3b8;font-style:italic}
+
+/* Modal (window style) */
+.notif-modal{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(2px);
+  justify-content:center;align-items:center;z-index:1002;padding:20px
+}
+.notif-window{
+  width:720px;max-width:calc(100vw - 32px);
+  border-radius:18px;overflow:hidden;background:#fff;border:1px solid #eef0f3;
+  box-shadow:0 24px 60px rgba(0,0,0,.28);
+}
+.titlebar{
+  height:46px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 12px 0 16px;background:#002060;color:#fff;
+}
+.titlebar .title{font-weight:700;letter-spacing:.02em}
+.titlebar-close{
+  width:30px;height:30px;border-radius:999px;border:1px solid rgba(255,255,255,.35);
+  background:transparent;color:#fff;cursor:pointer;font-size:18px;line-height:1;
+  display:flex;align-items:center;justify-content:center;
+}
+.titlebar-close:hover{background:rgba(255,255,255,.12)}
+.window-body{padding:18px 20px 20px;background:#fff}
+.body-heading{margin:0 0 10px 0;font-size:18px;color:#111827;font-weight:800}
+.body-text{white-space:pre-wrap;line-height:1.55;color:#111827;font-size:15px}

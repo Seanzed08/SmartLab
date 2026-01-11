@@ -1,0 +1,170 @@
+/* manage-operating-time.css – Compact version (fits 1 screen, fixed Save button & help text) */
+
+/* --- Base Layout --- */
+html, body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden; /* No scrolling */
+  font-family: 'Roboto', sans-serif;
+  background: #f9f9f9;
+  color: #0f172a;
+}
+
+.content-area {
+  position: relative; /* for button positioning */
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  padding: 18px 24px;
+  overflow: hidden;
+}
+
+/* --- Headings --- */
+h2 {
+  color: #0f2454;
+  font-size: 24px;
+  font-weight: 800;
+  margin: 6px 0 12px;
+  letter-spacing: .2px;
+}
+.panel-header h3 {
+  font-size: 18px;
+  color: #1e293b;
+  margin: 0 0 8px;
+}
+
+/* --- Controls --- */
+.controls-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.controls-row .btn {
+  padding: 4px 8px;
+  font-size: 12px;
+  border-radius: 6px;
+}
+
+/* --- Buttons --- */
+.btn {
+  padding: 6px 10px;
+  border: none;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+  transition: 0.2s ease;
+  color: #fff;
+  background: #0d6efd;
+  line-height: 1.1;
+}
+.btn-secondary { background: #6c757d; }
+.btn-add { background: #0d6efd; }
+.btn:hover { opacity: .9; transform: translateY(-1px); }
+
+/* --- Table --- */
+.table-wrap {
+  flex: 1;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 6px 16px rgba(2,13,43,.06);
+  overflow: hidden;
+  /* Leave some breathing room below, but not too much — help text uses its own margin too */
+  margin-bottom: 8px;
+}
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.table thead {
+  background: #eef1f6;
+  text-transform: uppercase;
+  font-size: 11.5px;
+  color: #334155;
+}
+.table th, .table td {
+  padding: 8px 10px;
+  text-align: center;
+  border-bottom: 1px solid #eef2f5;
+  font-size: 12.5px;
+}
+.table tbody tr:hover { background: #fafbfd; }
+.table th:nth-child(1), .table td:nth-child(1) { width: 120px; }
+.table th:nth-child(2), .table td:nth-child(2) { width: 90px; }
+.table th:nth-child(3), .table td:nth-child(3) { width: 130px; }
+.table th:nth-child(4), .table td:nth-child(4) { width: 130px; }
+
+/* --- Inputs --- */
+input[type="time"] {
+  border: 1px solid #d6d8dc;
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-size: 12px;
+  width: 100%;
+  height: 28px;
+}
+input[type="time"]:focus {
+  outline: none;
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 2px rgba(13,110,253,.18);
+}
+input[type="time"]:disabled {
+  background: #f3f4f6;
+  color: #9ca3af;
+}
+
+/* --- Help text (ensure visible above fixed button) --- */
+.form-help {
+  color: #64748b;
+  font-size: 11.5px;
+  line-height: 1.3;
+  /* This bottom margin keeps the bullets clear of the fixed Save button */
+  margin: 6px 0 64px;
+}
+.form-help ul {
+  margin: 6px 0 0 18px;
+  padding: 0;
+  list-style: disc;
+}
+.form-help li { margin: 2px 0; }
+
+/* --- Save Button Row (fixed) --- */
+.modal-actions {
+  position: absolute;
+  right: 24px;
+  bottom: 18px;
+  display: flex;
+  justify-content: flex-end;
+  margin: 0;
+  background: transparent;
+  z-index: 10;
+}
+.modal-actions .btn-add {
+  font-size: 12px;
+  padding: 6px 14px;
+  border-radius: 6px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+}
+
+/* --- Utility --- */
+.nowrap { white-space: nowrap; }
+.ellipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+
+/* --- Responsive (smaller screens) --- */
+@media (max-width: 720px) {
+  .content-area { padding: 14px; }
+  h2 { font-size: 20px; }
+  .controls-row { flex-direction: column; gap: 6px; }
+  .table th, .table td { font-size: 11px; padding: 6px; }
+  .modal-actions { right: 14px; bottom: 12px; }
+  .form-help { margin-bottom: 72px; } /* a touch more room on small screens */
+}
+.dashboard-page h2 {
+    margin: 6px 0 10px;
+    font-size: 22px;
+    font-weight: 800;
+    color: #0f2454;
+}

@@ -1,0 +1,207 @@
+{% load static %}
+
+<aside class="sidebar">
+  {# Show logo click only if role is admin (no is_authenticated needed) #}
+  {% with urole=request.user.role|default:'' srole=request.session.role|default:'' %}
+    {% if urole|lower == 'admin' or srole|lower == 'admin' %}
+      <div class="brand-header-hitbox">
+        {% include "includes/_sidebar_header.html" %}
+        <!-- invisible button overlay that matches the logo bounds exactly -->
+        <button type="button" class="brand-logo-hit" data-open-branding aria-label="Edit branding"></button>
+      </div>
+    {% else %}
+      {% include "includes/_sidebar_header.html" %}
+    {% endif %}
+  {% endwith %}
+
+  <nav class="sidebar-menu">
+    <a href="{% url 'dashboard' %}" class="{% if current_page == 'Attendance Record' %}active{% endif %}">Attendance Record</a>
+    <a href="{% url 'manage_faculty' %}" class="{% if current_page == 'Manage Teacher' %}active{% endif %}">Manage Teacher</a>
+    <a href="{% url 'manage_students' %}" class="{% if current_page == 'Manage Student' %}active{% endif %}">Manage Student</a>
+    <a href="{% url 'manage_laboratories' %}" class="{% if current_page == 'Manage Laboratories' %}active{% endif %}">Manage Laboratories</a>
+    <a href="{% url 'manage_schedule' %}" class="{% if current_page == 'Lab Reservation' %}active{% endif %}">Lab Reservation</a>
+    <a href="{% url 'manage_operating_time' %}" class="{% if current_page == 'Operating Time' %}active{% endif %}">Operating Time</a>
+    <a href="{% url 'manage_courses' %}" class="{% if current_page == 'Manage Courses' %}active{% endif %}">Manage Courses &amp; SEM</a>
+  </nav>
+
+  <form action="{% url 'logout' %}" method="POST" class="logout-form">
+    {% csrf_token %}
+    <button type="submit" class="logout-btn">Logout</button>
+  </form>
+</aside>
+
+{# ===== Tiny Branding Modal (admins only) ===== #}
+{% with urole=request.user.role|default:'' srole=request.session.role|default:'' %}
+{% if urole|lower == 'admin' or srole|lower == 'admin' %}
+<div id="brandingModal" class="branding-mini-modal hidden" aria-hidden="true">
+  <div class="branding-mini-backdrop" data-close-branding></div>
+  <div class="branding-mini-dialog" role="dialog" aria-modal="true" aria-labelledby="brandingTitle">
+    <div class="branding-mini-head">
+      <h4 id="brandingTitle">Edit Brand</h4>
+      <button type="button" class="branding-mini-close" data-close-branding aria-label="Close">&times;</button>
+    </div>
+    <form id="brandingForm" method="post" enctype="multipart/form-data" action="{% url 'branding_settings' %}">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ request.get_full_path }}">
+      <div class="branding-mini-body">
+        <label class="mini-label">Name</label>
+        <input type="text" name="brand_name" class="mini-input" value="{{ brand_name }}" required>
+
+        <label class="mini-label" style="margin-top:8px;">Logo</label>
+        <input type="file" name="brand_logo" accept="image/*" class="mini-input">
+
+        {% if brand_logo_url %}
+          <div class="mini-preview">
+            <img src="{{ brand_logo_url }}" alt="{{ brand_name }} Logo">
+          </div>
+        {% endif %}
+      </div>
+      <div class="branding-mini-foot">
+        <button type="button" class="mini-btn" data-close-branding>Cancel</button>
+        <button type="submit" class="mini-btn primary">Save</button>
+      </div>
+      <div id="brandingToast" class="mini-toast hidden">Saved ✓ Reloading…</div>
+    </form>
+  </div>
+</div>
+{% endif %}
+{% endwith %}
+
+<style>
+  /* --- logo hit area setup --- */
+  .brand-header-hitbox { position: relative; }
+  /* Prevent the image itself from swallowing clicks so the overlay handles it */
+  .brand-header-hitbox .sidebar-header .logo { pointer-events: none; }
+
+  /* This overlay will be sized/positioned by JS to match the logo exactly */
+  .brand-logo-hit {
+    position:absolute; background:transparent; border:0; padding:0; margin:0;
+    cursor:pointer; /* size set by JS */
+  }
+
+  /* --- tiny modal --- */
+  .branding-mini-modal.hidden { display:none; }
+  .branding-mini-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.35); z-index: 9998; }
+  .branding-mini-dialog {
+    position:fixed; z-index: 9999;
+    top:50%; left:50%; transform:translate(-50%,-50%);
+    width:min(360px, 92vw);
+    background:#fff; border-radius:12px; box-shadow:0 10px 40px rgba(0,0,0,.22);
+    overflow:hidden;
+  }
+  .branding-mini-head { display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-bottom:1px solid #eee; }
+  .branding-mini-head h4 { margin:0; font-size:16px; font-weight:700; }
+  .branding-mini-close { background:none; border:none; font-size:20px; line-height:1; cursor:pointer; }
+
+  .branding-mini-body { padding:12px; }
+  .mini-label { display:block; font-size:12px; font-weight:600; margin-bottom:4px; color:#374151; }
+  .mini-input {
+    width:100%; font-size:14px; padding:8px 10px;
+    border:1px solid #d1d5db; border-radius:8px; outline:none;
+  }
+  .mini-input:focus { border-color:#2d6cdf; box-shadow:0 0 0 3px rgba(45,108,223,.15); }
+
+  .mini-preview { margin-top:8px; }
+  .mini-preview img { max-height:60px; width:auto; display:block; }
+
+  .branding-mini-foot { display:flex; justify-content:flex-end; gap:6px; padding:10px 12px; border-top:1px solid #eee; }
+  .mini-btn { padding:7px 12px; border:none; border-radius:8px; cursor:pointer; background:#e5e7eb; font-size:14px; }
+  .mini-btn.primary { background:#2d6cdf; color:#fff; }
+
+  .mini-toast {
+    position:absolute; right:10px; bottom:10px;
+    background:#16a34a; color:#fff; padding:6px 8px; border-radius:8px; font-size:12px;
+  }
+  .mini-toast.hidden { display:none; }
+</style>
+
+<script>
+(function() {
+  // Only run if the modal exists (admin role)
+  const modal = document.getElementById('brandingModal');
+  if (!modal) return;
+
+  const form = document.getElementById('brandingForm');
+  const toast = document.getElementById('brandingToast');
+  const closeEls = modal.querySelectorAll('[data-close-branding]');
+  const logoBtn = document.querySelector('.brand-logo-hit');
+  const headerBox = document.querySelector('.brand-header-hitbox');
+
+  function openModal() {
+    modal.classList.remove('hidden');
+    modal.setAttribute('aria-hidden', 'false');
+  }
+  function closeModal() {
+    modal.classList.add('hidden');
+    modal.setAttribute('aria-hidden', 'true');
+    const file = form?.querySelector('input[type="file"]');
+    if (file) file.value = '';
+  }
+
+  // Size the invisible button to match the logo exactly
+  function positionLogoHit() {
+    if (!logoBtn || !headerBox) return;
+    const logo = headerBox.querySelector('.sidebar-header .logo');
+    if (!logo) return;
+
+    const boxRect = headerBox.getBoundingClientRect();
+    const logoRect = logo.getBoundingClientRect();
+
+    const left = logoRect.left - boxRect.left;
+    const top  = logoRect.top  - boxRect.top;
+
+    // Apply dimensions
+    logoBtn.style.left = left + 'px';
+    logoBtn.style.top  = top  + 'px';
+    logoBtn.style.width  = logoRect.width + 'px';
+    logoBtn.style.height = logoRect.height + 'px';
+  }
+
+  // Initial and on resize (to keep aligned in responsive / zoom)
+  positionLogoHit();
+  window.addEventListener('resize', positionLogoHit);
+
+  // Open/close handlers
+  logoBtn?.addEventListener('click', openModal);
+  closeEls.forEach(el => el.addEventListener('click', closeModal));
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal();
+  });
+
+  // AJAX submit for tiny modal
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const action = form.getAttribute('action');
+    const fd = new FormData(form);
+
+    try {
+      const res = await fetch(action, {
+        method: 'POST',
+        body: fd,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      });
+      if (!res.ok) { alert('Failed to save branding.'); return; }
+
+      const data = await res.json();
+      if (data.ok) {
+        // Update header immediately
+        if (data.brand_name) {
+          document.querySelectorAll('.sidebar-title').forEach(el => el.textContent = data.brand_name);
+        }
+        if (data.brand_logo_url) {
+          const cacheBust = data.brand_logo_url + (data.brand_logo_url.includes('?') ? '&' : '?') + 'v=' + Date.now();
+          document.querySelectorAll('.sidebar-header .logo').forEach(img => img.src = cacheBust);
+        }
+        // Tiny toast + gentle reload to refresh everywhere
+        toast?.classList.remove('hidden');
+        setTimeout(() => window.location.reload(), 800);
+      } else {
+        alert('Could not save branding.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('An error occurred. Please try again.');
+    }
+  });
+})();
+</script>

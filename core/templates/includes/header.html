@@ -1,0 +1,88 @@
+{% load static %}
+
+<link rel="stylesheet" href="{% static 'css/admin/admin_header.css' %}">
+
+<header class="topbar">
+  <div class="user-info">
+    <a href="{% url 'admin_profile' %}" style="display:flex;align-items:center;text-decoration:none;">
+      <img
+        src="{% if admin_profile_image %}{{ MEDIA_URL }}{{ admin_profile_image }}{% else %}{% static 'img/admin-icon.png' %}{% endif %}"
+        class="admin-icon" alt="Admin Image"
+        style="width:44px;height:44px;border-radius:50%;object-fit:cover;"
+      />
+      <span style="color:#333">{{ admin_name }}</span>
+    </a>
+  </div>
+
+  <div class="notif-wrapper">
+    <span class="notif-icon" id="notifToggle" title="Notifications">🔔
+      {% if unread_count > 0 %}<span class="notif-badge">{{ unread_count }}</span>{% endif %}
+    </span>
+  </div>
+</header>
+
+<!-- Dropdown (doesn't affect header height) -->
+<div class="notif-dropdown collapsed" id="notifDropdown" aria-hidden="true">
+  <div class="notif-header"><span>Notifications</span></div>
+
+  {% if notifications %}
+    <div class="notif-body" id="notifBody">
+      <ul class="notif-list" id="notifList">
+        {% for notif in notifications %}
+          <li class="notif-item {% if notif.status == 'Unread' %}unread{% endif %}" data-id="{{ notif.id }}">
+            <div class="notif-row">
+              <span class="dot"></span>
+              <div class="content">
+                <p class="message">{{ notif.message|default:"(No message)" }}</p>
+                <small class="timestamp">{{ notif.created_at|date:"M d, Y H:i" }}</small>
+              </div>
+              <span class="chev" aria-hidden="true">›</span>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+    <div class="notif-footer">
+      <div class="footer-actions">
+        <button id="toggleCollapseBtn" class="btn-primary">See more</button>
+      </div>
+    </div>
+  {% else %}
+    <p class="no-notifs">No notifications.</p>
+  {% endif %}
+</div>
+
+<!-- Modal -->
+<div id="notifModal" class="notif-modal" aria-hidden="true">
+  <div class="notif-window" id="notifWindow">
+    <div class="titlebar">
+      <span class="title">Notification</span>
+      <button class="titlebar-close" id="closeModalBtn" aria-label="Close">×</button>
+    </div>
+    <div class="window-body">
+      <h3 class="body-heading">Notification Details</h3>
+      <p id="notifFullMessage" class="body-text"></p>
+    </div>
+  </div>
+</div>
+
+
+<script>
+  window.NOTIF = {
+    markReadUrl: "{% url 'admin_mark_notifications_read' %}",
+    detailUrlTemplate: "{% url 'admin_notification_detail' 0 %}",
+  };
+
+  // === PUSHER GLOBALS FOR ADMIN ===
+  window.PUSHER_KEY = "{{ PUSHER_KEY|default:'' }}";
+  window.PUSHER_CLUSTER = "{{ PUSHER_CLUSTER|default:'' }}";
+  window.CURRENT_ADMIN_ID = "{{ request.session.user_id|default:'' }}";
+  window.CURRENT_TEACHER_ID = "";  // ensure teacher channel not used here
+</script>
+
+<!-- PUSHER + SHARED REALTIME JS -->
+<script src="https://js.pusher.com/8.4.0/pusher.min.js"></script>
+<script src="{% static 'js/pusher.js' %}"></script>
+
+<!-- Existing header behavior -->
+<script src="{% static 'js/admin/admin_header.js' %}"></script>

@@ -1,0 +1,64 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Edit Laboratory | NEUST Admin</title>
+  <link rel="stylesheet" href="{% static 'css/admin/admin-style.css' %}">
+  <link rel="stylesheet" href="{% static 'css/admin/manage_laboratories.css' %}">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="dashboard-container">
+    {% include 'includes/sidebar.html' %}
+    <div class="main-panel">
+      {% include 'includes/header.html' %}
+
+      <section class="content-area">
+        <h2>Edit Laboratory</h2>
+
+        <form method="POST" class="form-card">
+          {% csrf_token %}
+
+          <div class="form-group">
+            <label>Lab Number</label>
+            <input type="number" name="lab_num" value="{{ lab_num }}" required>
+          </div>
+
+          <div class="form-group">
+            <label>Location</label>
+            <input type="text" name="location" value="{{ location }}" required>
+          </div>
+
+          <div class="form-group">
+            <label>Capacity</label>
+            <input type="number" name="capacity" value="{{ capacity }}" required>
+          </div>
+
+          <div class="form-group">
+            <label>Faculty In-Charge</label>
+            <select name="faculty_id">
+              <option value="">-- None --</option>
+              {% for f in faculty_list %}
+                <option value="{{ f.0 }}" {% if f.0 == faculty_id %}selected{% endif %}>
+                  {{ f.1 }} {{ f.2 }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>RFID Reader ID</label>
+            <input type="text" name="rfid_reader_id" value="{{ rfid_reader_id|default_if_none:'' }}" placeholder="e.g. LAB1-READER01">
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-add">Save Changes</button>
+            <a href="{% url 'manage_laboratories' %}" class="btn btn-cancel">Cancel</a>
+          </div>
+        </form>
+      </section>
+    </div>
+  </div>
+</body>
+</html>

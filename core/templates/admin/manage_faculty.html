@@ -1,0 +1,1162 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Manage Teacher | NEUST Admin</title>
+  <link rel="stylesheet" href="{% static 'css/admin/admin-style.css' %}" />
+  <link rel="stylesheet" href="{% static 'css/admin/manage-faculty.css' %}" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;600;700;800&display=swap" rel="stylesheet" />
+</head>
+<body class="dashboard-page">
+<div class="dashboard-container">
+  {% include 'includes/sidebar.html' %}
+  <div class="main-panel">
+    {% include 'includes/header.html' %}
+
+    <section class="content-area">
+      <h2>Manage Teacher</h2>
+
+      <!-- ===============================
+           Excel Upload + Template Download
+           =============================== -->
+      <form action="{% url 'upload_teacher_excel' %}"
+            method="POST"
+            enctype="multipart/form-data"
+            class="upload-form upload-compact">
+        {% csrf_token %}
+        <span class="upload-label nowrap">Upload .xlsx</span>
+
+        <div class="file-input-wrap">
+          <input type="file"
+                 name="excel_files"
+                 id="excel_files"
+                 multiple
+                 accept=".xlsx"
+                 required />
+        </div>
+
+        <button type="submit" class="btn btn-upload btn-sm">
+          📄 Upload Excel
+        </button>
+
+        <a href="{% static 'excel_templates/teacher_upload_template.xlsx' %}"
+           class="btn btn-clear btn-sm"
+           style="margin-left:8px;">
+          Download template
+        </a>
+      </form>
+
+      <!-- Skipped rows summary -->
+      {% if upload_skipped %}
+        <div class="upload-skipped-box" id="uploadSkippedBox">
+          <button type="button"
+                  class="upload-skipped-close"
+                  aria-label="Dismiss skipped rows notice"
+                  onclick="document.getElementById('uploadSkippedBox').style.display='none';">
+            ×
+          </button>
+
+          <strong>{{ upload_skipped|length }} row(s) were skipped in the last upload.</strong>
+          <p>Some teacher records were not imported. You can review their details below.</p>
+          <button type="button"
+                  class="btn btn-clear btn-sm"
+                  style="align-self:flex-start;margin-top:4px;"
+                  onclick="openModal('skippedRowsModal')">
+            View skipped rows
+          </button>
+        </div>
+      {% endif %}
+
+      <!-- ===============================
+           Top Action Bar
+           =============================== -->
+      <div class="top-action-bar">
+        <div class="action-left">
+          {% if not show_archived %}
+            <button class="btn btn-add btn-sm"
+                    data-open-modal="addTeacherModal"
+                    title="Add a new teacher">
+              + Add Teacher
+            </button>
+          {% endif %}
+
+          <div class="archive-toggle">
+            {% if show_archived %}
+              <a href="?archived=0{% if q %}&q={{ q|urlencode }}{% endif %}"
+                 class="btn btn-primary btn-sm">
+                Active Teachers
+              </a>
+            {% else %}
+              <a href="?archived=1{% if q %}&q={{ q|urlencode }}{% endif %}"
+                 class="btn btn-secondary btn-sm">
+                Archived
+              </a>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="search-wrap">
+          <form method="get" aria-label="Search teachers">
+            <input type="hidden" name="archived" value="{% if show_archived %}1{% else %}0{% endif %}">
+            <input type="text"
+                   name="q"
+                   class="search-input"
+                   placeholder="Search name, email, RFID…"
+                   value="{{ q|default_if_none:'' }}"
+                   autocomplete="off" />
+            <button type="submit" class="btn btn-primary btn-sm">Search</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- ===============================
+           Teachers Table
+           =============================== -->
+      <div class="table-wrap">
+        <table role="table">
+          <thead>
+          <tr>
+            <th scope="col">Name</th>
+            <th scope="col">Email</th>
+            <th scope="col">RFID Code</th>
+            <th scope="col">Courses</th>
+            <th scope="col">Actions</th>
+          </tr>
+          </thead>
+          <tbody>
+          {% for t in teachers %}
+            <tr id="row-faculty-{{ t.id }}" class="{% if show_archived %}row-archived{% endif %}">
+              <td title="{{ t.first_name }} {% if t.middle_name %}{{ t.middle_name }} {% endif %}{{ t.last_name }}{% if t.ext_name %} {{ t.ext_name }}{% endif %}">
+                {{ t.first_name }}
+                {% if t.middle_name %} {{ t.middle_name }}{% endif %}
+                {{ t.last_name }}
+                {% if t.ext_name %} {{ t.ext_name }}{% endif %}
+                {% if t.role == 'admin' %}
+                  <span class="badge-archived">admin</span>
+                {% endif %}
+              </td>
+              <td title="{{ t.email }}">{{ t.email }}</td>
+              <td class="nowrap">{{ t.rfid }}</td>
+
+              <td>
+                {% if t.courses %}
+                  <div class="course-cell">
+                    <ul class="course-chips" data-max="2">
+                      {% for c in t.courses %}
+                        <li class="chip"
+                            title="{{ c.name }}{% if c.sem %} – {{ c.sem }}{% endif %}">
+                          <span class="chip-name">{{ c.name }}</span>
+                          {% if c.sem %}
+                            <span class="chip-sem">{{ c.sem }}</span>
+                          {% endif %}
+                          <form method="post"
+                                action="{% url 'unassign_course' c.atid %}"
+                                class="needs-confirm"
+                                data-confirm="Unassign {{ c.name }}{% if c.sem %} ({{ c.sem }}){% endif %}?">
+                            {% csrf_token %}
+                            <button type="submit"
+                                    class="chip-remove"
+                                    aria-label="Unassign {{ c.name }}">
+                              ×
+                            </button>
+                          </form>
+                        </li>
+                      {% endfor %}
+                    </ul>
+                    <button type="button"
+                            class="chip-toggle"
+                            hidden
+                            aria-expanded="false">
+                      +0 more
+                    </button>
+                  </div>
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+
+              <td class="actions">
+                {% if show_archived %}
+                  <!-- ARCHIVED LIST: Restore + Delete -->
+                  <form method="post"
+                        action="{% url 'restore_teacher' faculty_id=t.id %}"
+                        class="inline-form needs-confirm"
+                        data-confirm="Restore {{ t.first_name }} {{ t.last_name }}?"
+                        data-ok="Restore">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-add btn-sm">Restore</button>
+                  </form>
+
+                  <form method="post"
+                        action="{% url 'hard_delete_teacher' t.id %}"
+                        class="inline-form needs-confirm"
+                        data-confirm="Delete {{ t.first_name }} {{ t.last_name }} permanently? This cannot be undone."
+                        data-ok="Delete">
+                    {% csrf_token %}
+                    {% if t.can_hard_delete %}
+                      <button type="submit"
+                              class="btn btn-delete btn-sm"
+                              title="Permanently delete this teacher.">
+                        Delete
+                      </button>
+                    {% else %}
+                      <button type="button"
+                              class="btn btn-delete btn-sm is-blocked"
+                              disabled
+                              aria-disabled="true"
+                              title="{{ t.delete_reason|default:'Cannot delete while still referenced (schedules, assignments, etc.)' }}">
+                        Delete
+                      </button>
+                    {% endif %}
+                  </form>
+                {% else %}
+                  <!-- ACTIVE LIST -->
+                  <button type="button"
+                          class="btn btn-assign btn-sm"
+                          data-fid="{{ t.id }}"
+                          data-name="{{ t.first_name }}{% if t.middle_name %} {{ t.middle_name }}{% endif %} {{ t.last_name }}{% if t.ext_name %} {{ t.ext_name }}{% endif %}"
+                          data-url="{% url 'assign_course_save' t.id %}"
+                          onclick="openAssignModal(this)">
+                    Assign Course
+                  </button>
+
+                  <button type="button"
+                          class="btn btn-edit btn-sm"
+                          data-fid="{{ t.id }}"
+                          onclick="openEditModal(this)">
+                    Edit
+                  </button>
+
+                  <form method="post"
+                        action="{% url 'hard_delete_teacher' t.id %}"
+                        class="inline-form needs-confirm"
+                        data-confirm="Delete {{ t.first_name }} {{ t.last_name }} permanently? This cannot be undone."
+                        data-ok="Delete">
+                    {% csrf_token %}
+                    {% if t.can_hard_delete %}
+                      <button type="submit"
+                              class="btn btn-delete btn-sm"
+                              title="Permanently delete this teacher.">
+                        Delete
+                      </button>
+                    {% else %}
+                      <button type="button"
+                              class="btn btn-delete btn-sm is-blocked"
+                              disabled
+                              aria-disabled="true"
+                              title="{{ t.delete_reason|default:'Cannot delete while still referenced (schedules, assignments, etc.)' }}">
+                        Delete
+                      </button>
+                    {% endif %}
+                  </form>
+
+                  <button type="button"
+                          class="btn btn-upload btn-sm"
+                          onclick="openRFIDModal('{{ t.id }}', '{{ t.first_name }}{% if t.middle_name %} {{ t.middle_name }}{% endif %} {{ t.last_name }}{% if t.ext_name %} {{ t.ext_name }}{% endif %}')">
+                    Assign RFID
+                  </button>
+                {% endif %}
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="5" style="text-align:center;">
+                {% if q %}No results for “{{ q }}”.{% else %}No teachers found.{% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===============================
+         ADD TEACHER MODAL
+         =============================== -->
+    <div id="addTeacherModal" class="modal">
+      <div class="modal-panel modal-panel-sm">
+        <button type="button"
+                class="modal-close"
+                aria-label="Close add teacher form">
+          ×
+        </button>
+
+        <h3 class="modal-title">Add Teacher</h3>
+
+        <form id="addTeacherForm"
+              method="post"
+              action="{% url 'add_teacher' %}"
+              class="compact-form">
+          {% csrf_token %}
+
+          <div class="form-grid-2">
+            <!-- First name -->
+            <div class="field">
+              <label for="add_first_name">
+                First name <span class="req">*</span>
+              </label>
+              <input type="text"
+                    id="add_first_name"
+                    name="first_name"
+                    required
+                    autocomplete="off" />
+            </div>
+
+            <!-- Middle name -->
+            <div class="field">
+              <label for="add_middle_name">Middle name</label>
+              <input type="text"
+                    id="add_middle_name"
+                    name="middle_name"
+                    autocomplete="off" />
+            </div>
+
+            <!-- Last name -->
+            <div class="field">
+              <label for="add_last_name">
+                Last name <span class="req">*</span>
+              </label>
+              <input type="text"
+                    id="add_last_name"
+                    name="last_name"
+                    required
+                    autocomplete="off" />
+            </div>
+
+            <!-- Extension name (optional) -->
+            <div class="field">
+              <label for="add_extension_name">
+                Extension name
+                <span class="hint">(optional)</span>
+              </label>
+              <input type="text"
+                    id="add_extension_name"
+                    name="extension_name"
+                    placeholder="Jr., Sr., II, III…"
+                    autocomplete="off" />
+            </div>
+
+            <!-- Email -->
+            <div class="field">
+              <label for="add_email">
+                Email <span class="req">*</span>
+              </label>
+              <input type="email"
+                    id="add_email"
+                    name="email"
+                    required
+                    autocomplete="off" />
+            </div>
+
+            <!-- Password -->
+            <div class="field">
+              <label for="add_password">
+                Password <span class="req">*</span>
+              </label>
+              <input type="password"
+                    id="add_password"
+                    name="password"
+                    required
+                    autocomplete="off" />
+            </div>
+
+            <!-- Role (full row) -->
+            <div class="field full-row">
+              <label for="add_role">Role</label>
+              <select id="add_role" name="role">
+                <option value="teacher" selected>Teacher</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="modal-actions">
+            <button type="button"
+                    class="btn btn-clear btn-sm"
+                    onclick="closeModal('addTeacherModal')">
+              Cancel
+            </button>
+            <button type="submit"
+                    class="btn btn-primary btn-sm">
+              Save Teacher
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- ===============================
+         EDIT TEACHER MODAL
+         =============================== -->
+        <div id="editTeacherModal" class="modal">
+          <div class="modal-panel modal-panel-sm">
+
+            <button type="button"
+                    class="modal-close"
+                    onclick="closeEditTeacherModal()"
+                    aria-label="Close edit teacher form">
+              ×
+            </button>
+
+            <h3 class="modal-title">Edit Teacher</h3>
+
+            <form id="editTeacherForm" method="post" class="compact-form">
+              {% csrf_token %}
+
+              <div class="form-grid-2">
+
+                <!-- First Name -->
+                <div class="field">
+                  <label for="edit_first_name">
+                    First Name <span class="req">*</span>
+                  </label>
+                  <input type="text" id="edit_first_name" name="first_name" required>
+                </div>
+
+                <!-- Middle Name -->
+                <div class="field">
+                  <label for="edit_middle_name">Middle Name</label>
+                  <input type="text" id="edit_middle_name" name="middle_name">
+                </div>
+
+                <!-- Last Name -->
+                <div class="field">
+                  <label for="edit_last_name">
+                    Last Name <span class="req">*</span>
+                  </label>
+                  <input type="text" id="edit_last_name" name="last_name" required>
+                </div>
+
+                <!-- Extension Name -->
+                <div class="field">
+                  <label for="edit_extension_name">
+                    Extension Name <span class="hint">(optional)</span>
+                  </label>
+                  <input type="text" id="edit_extension_name" name="extension_name" placeholder="Jr., Sr., II, III…">
+                </div>
+
+                <!-- Email -->
+                <div class="field">
+                  <label for="edit_email">
+                    Email <span class="req">*</span>
+                  </label>
+                  <input type="email" id="edit_email" name="email" required>
+                </div>
+
+                <!-- New Password -->
+                <div class="field">
+                  <label for="edit_password">
+                    New Password <span class="hint">(leave blank to keep)</span>
+                  </label>
+                  <input type="password" id="edit_password" name="password" autocomplete="off">
+                </div>
+
+                <!-- Role -->
+                <div class="field">
+                  <label for="edit_role">Role</label>
+                  <select id="edit_role" name="role">
+                    <option value="teacher">Teacher</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+
+                <!-- Status -->
+                <div class="field">
+                  <label for="edit_status">Status</label>
+                  <select id="edit_status" name="status">
+                    <option value="active">Active</option>
+                    <option value="inactive">Archived</option>
+                  </select>
+                </div>
+
+              </div>
+
+              <div class="modal-actions">
+                <button type="button"
+                        class="btn btn-clear btn-sm"
+                        onclick="closeEditTeacherModal()">
+                  Cancel
+                </button>
+                <button type="submit" class="btn btn-primary btn-sm">
+                  Save Changes
+                </button>
+              </div>
+
+            </form>
+
+          </div>
+        </div>
+
+    <div id="editBackdrop" class="emodal-backdrop" style="display:none;"></div>
+
+    <!-- ===============================
+         ASSIGN COURSE MODAL
+         =============================== -->
+    <div id="assignBackdrop" class="assign-backdrop" hidden></div>
+    <div id="assignModal" class="assign-modal" hidden>
+      <div class="assign-card">
+        <button type="button" id="assignClose" class="assign-x" aria-label="Close">×</button>
+        <h3 class="assign-title">Assign Course</h3>
+        <p class="assign-subtitle">
+          Assign a course to <span id="assignTeacherLabel">—</span>.
+        </p>
+
+        <form id="assignForm" class="assign-form" method="post">
+          {% csrf_token %}
+          <div class="assign-field">
+            <label class="assign-label" for="assignSemester">Semester</label>
+            <select id="assignSemester" name="semester_id" class="assign-select" required>
+              <option value="" disabled selected>Select Semester</option>
+              {% for sid, label in all_semesters %}
+                <option value="{{ sid }}">{{ label }}</option>
+              {% endfor %}
+            </select>
+            <div class="assign-help">Only ongoing semesters are shown.</div>
+          </div>
+
+          <div class="assign-field">
+            <label class="assign-label" for="assignProgram">Program</label>
+            <select id="assignProgram" name="program_id" class="assign-select">
+              <option value="">All programs…</option>
+              <!-- JS will populate actual list via AJAX -->
+            </select>
+          </div>
+
+          <div class="assign-field">
+            <label class="assign-label" for="assignCourse">Course</label>
+            <select id="assignCourse" name="course_id" class="assign-select" disabled required>
+              <option value="" disabled selected>Select a semester first…</option>
+            </select>
+          </div>
+
+          <div class="assign-actions">
+            <button type="button" id="assignCancel" class="btn btn-clear btn-sm">Cancel</button>
+            <button type="submit" class="btn btn-primary btn-sm">Assign</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- ===============================
+         RFID MODAL
+         =============================== -->
+    <div id="rfidModal" class="modal">
+      <div class="modal-content">
+        <button type="button" class="modal-close" aria-label="Close">&times;</button>
+        <h3>Assign RFID</h3>
+        <p id="teacherInfo" class="muted" style="margin-top:4px;"></p>
+
+        <form id="rfidForm" method="post">
+          {% csrf_token %}
+          <input type="hidden" id="teacherIdInput" name="faculty_id">
+          <div class="form-group">
+            <label for="rfidInput">Scan RFID card</label>
+            <input id="rfidInput" type="text" name="rfid" autocomplete="off" required>
+          </div>
+          <p id="rfidStatus"></p>
+
+          <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:4px;">
+            <button type="button"
+                    class="btn btn-clear btn-sm"
+                    onclick="closeModal('rfidModal')">
+              Cancel
+            </button>
+            <button type="submit" class="btn btn-primary btn-sm">
+              Save
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- ===============================
+         CONFIRM MODAL (for deletes etc.)
+         =============================== -->
+    <div id="confirmBackdrop" class="cmodal-backdrop" hidden></div>
+    <div id="confirmModal" class="cmodal" hidden>
+      <div class="cmodal-card">
+        <button type="button" id="confirmX" class="cmodal-x" aria-label="Close">×</button>
+        <h3 id="confirmTitle">Please confirm</h3>
+        <p id="confirmMessage">Are you sure?</p>
+        <div class="cmodal-actions">
+          <button type="button" id="confirmCancel" class="btn btn-clear btn-sm">Cancel</button>
+          <button type="button" id="confirmOk" class="btn btn-primary btn-sm">OK</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===============================
+         SKIPPED ROWS MODAL
+         =============================== -->
+    {% if upload_skipped %}
+      <div id="skippedRowsModal" class="skipped-modal">
+        <div class="skipped-modal-card">
+          <div class="skipped-modal-header">
+            <h3 class="skipped-modal-title">Skipped rows from last upload</h3>
+            <button type="button"
+                    class="skipped-modal-close"
+                    onclick="closeModal('skippedRowsModal')"
+                    aria-label="Close">
+              ×
+            </button>
+          </div>
+          <div class="skipped-modal-body">
+            <table class="skipped-table">
+              <thead>
+              <tr>
+                <th>Row #</th>
+                <th>First</th>
+                <th>Middle</th>
+                <th>Last</th>
+                <th>Ext.</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Reason</th>
+              </tr>
+              </thead>
+              <tbody>
+              {% for r in upload_skipped %}
+                <tr>
+                  <td>{{ r.row }}</td>
+                  <td>{{ r.first_name }}</td>
+                  <td>{{ r.middle_name }}</td>
+                  <td>{{ r.last_name }}</td>
+                  <td>{{ r.extension_name }}</td>
+                  <td>{{ r.email }}</td>
+                  <td>{{ r.role }}</td>
+                  <td class="skipped-reason">{{ r.reason }}</td>
+                </tr>
+              {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
+    <!-- Toast container -->
+    <div class="toast-wrap">
+      <div id="appToast" class="toast" hidden>
+        <div class="t-icon">✓</div>
+        <div class="t-msg"></div>
+      </div>
+    </div>
+
+    <!-- Django messages holder (for JS toast) -->
+    {% if messages %}
+      <div id="django-messages" hidden>
+        {% for m in messages %}
+          <div class="djmsg"
+               data-tags="{{ m.tags }}"
+               data-text="{{ m|escapejs }}"></div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+  </div> <!-- /main-panel -->
+</div>   <!-- /dashboard-container -->
+
+<script>
+  /* ===== Generic modal helpers ===== */
+  function openModal(id){
+    var m = document.getElementById(id);
+    if(!m) return;
+    m.classList.add('show');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeModal(id){
+    var m = document.getElementById(id);
+    if(!m) return;
+    m.classList.remove('show');
+    document.body.style.overflow = '';
+  }
+
+  // Open via [data-open-modal]
+  document.addEventListener('click', function(e){
+    var btn = e.target.closest('[data-open-modal]');
+    if (!btn) return;
+    e.preventDefault();
+    openModal(btn.getAttribute('data-open-modal'));
+  });
+
+  // Close modal by "×" for .modal / .emodal
+  document.addEventListener('click', function(e){
+    var x = e.target.closest('.modal .modal-close, .emodal .emodal-x');
+    if (!x) return;
+    var m = x.closest('.modal, .emodal, .skipped-modal');
+    if (m) m.classList.remove('show');
+    document.body.style.overflow = '';
+    if (m.id === 'editModal'){
+      document.getElementById('editBackdrop').style.display='none';
+    }
+  });
+
+  // Backdrop click & ESC close (includes skipped-modal)
+  window.addEventListener('click', function(e){
+    var modals = document.querySelectorAll('.modal.show, .emodal.show, .skipped-modal.show');
+    for (var i=0; i<modals.length; i++){
+      if(e.target === modals[i]) {
+        modals[i].classList.remove('show');
+        document.body.style.overflow='';
+      }
+    }
+  });
+  window.addEventListener('keydown', function(e){
+    if(e.key !== 'Escape') return;
+    var modals = document.querySelectorAll('.modal.show, .emodal.show, .skipped-modal.show');
+    for (var i=0;i<modals.length;i++){
+      modals[i].classList.remove('show');
+    }
+    document.body.style.overflow = '';
+  });
+
+  /* ===== Confirm dialog (Promise-based) ===== */
+  function confirmDialog(message, opts){
+    opts = opts || {};
+    var title = opts.title || 'Please confirm';
+    var okText = opts.okText || 'OK';
+    var cancelText = opts.cancelText || 'Cancel';
+    var backdrop = document.getElementById('confirmBackdrop');
+    var modal    = document.getElementById('confirmModal');
+    var msgEl    = document.getElementById('confirmMessage');
+    var titleEl  = document.getElementById('confirmTitle');
+    var okBtn    = document.getElementById('confirmOk');
+    var cancelBtn= document.getElementById('confirmCancel');
+    var xBtn     = document.getElementById('confirmX');
+
+    return new Promise(function(resolve){
+      titleEl.textContent = title;
+      msgEl.textContent   = message || 'Are you sure?';
+      okBtn.textContent   = okText;
+      cancelBtn.textContent = cancelText;
+
+      backdrop.hidden = false;
+      modal.hidden = false;
+      document.body.style.overflow='hidden';
+
+      function cleanup(result){
+        backdrop.hidden = true;
+        modal.hidden = true;
+        document.body.style.overflow='';
+        okBtn.removeEventListener('click', onOk);
+        cancelBtn.removeEventListener('click', onCancel);
+        xBtn.removeEventListener('click', onCancel);
+        backdrop.removeEventListener('click', onCancel);
+        document.removeEventListener('keydown', onKeydown);
+        resolve(result);
+      }
+      function onOk(){ cleanup(true); }
+      function onCancel(){ cleanup(false); }
+      function onKeydown(e){ if(e.key==='Escape'){ e.preventDefault(); onCancel(); } }
+
+      okBtn.addEventListener('click', onOk);
+      cancelBtn.addEventListener('click', onCancel);
+      xBtn.addEventListener('click', onCancel);
+      backdrop.addEventListener('click', onCancel);
+      document.addEventListener('keydown', onKeydown);
+    });
+  }
+
+  // Wire confirm to forms
+  document.addEventListener('submit', function(e){
+    var form = e.target.closest('form.needs-confirm');
+    if (!form) return;
+    e.preventDefault();
+    var msg = form.getAttribute('data-confirm') || 'Are you sure?';
+    var okTxt = form.getAttribute('data-ok') || 'OK';
+    confirmDialog(msg, { okText: okTxt, cancelText: 'Cancel' })
+      .then(function(ok){ if (ok) form.submit(); });
+  });
+
+  /* ===== Chips collapse ===== */
+  document.addEventListener('DOMContentLoaded', function(){
+    document.querySelectorAll('.course-chips').forEach(function(ul){
+      var max = parseInt(ul.dataset.max || '2', 10);
+      var chips = Array.from(ul.querySelectorAll('.chip'));
+      if (chips.length > max) {
+        chips.forEach(function(chip, i){ if(i >= max) chip.classList.add('is-hidden'); });
+        var toggle = ul.parentElement.querySelector('.chip-toggle');
+        toggle.hidden = false;
+        toggle.textContent = '+' + (chips.length - max) + ' more';
+        var expanded = false;
+        toggle.addEventListener('click', function(){
+          expanded = !expanded;
+          chips.forEach(function(chip, i){
+            chip.classList.toggle('is-hidden', !expanded && i >= max);
+          });
+          toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+          toggle.textContent = expanded ? 'Show less' : ('+' + (chips.length - max) + ' more');
+        });
+      }
+    });
+  });
+
+  /* ===== Assign Course modal ===== */
+  function openAssignModal(btn){
+    var fid  = btn.getAttribute('data-fid');
+    var name = btn.getAttribute('data-name') || '';
+    var url  = btn.getAttribute('data-url');
+
+    var backdrop   = document.getElementById('assignBackdrop');
+    var modal      = document.getElementById('assignModal');
+    var labelEl    = document.getElementById('assignTeacherLabel');
+    var form       = document.getElementById('assignForm');
+
+    var programSel = document.getElementById('assignProgram');
+    var courseSel  = document.getElementById('assignCourse');
+    var semSel     = document.getElementById('assignSemester');
+
+    labelEl.textContent = name || '—';
+    form.action = url;
+
+    // reset selects
+    programSel.innerHTML = '<option value="">All programs…</option>';
+    courseSel.innerHTML  = '<option value="" disabled selected>Select a semester first…</option>';
+    courseSel.disabled   = true;
+    semSel.innerHTML     = '<option value="" disabled selected>Loading…</option>';
+
+    var allCourses = [];    // { id, program, label }
+    var assignedMap = {};   // { "<sid>": [course_ids] }
+
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', "{% url 'assign_course_options' 0 %}".replace('/0/', '/' + fid + '/'), true);
+    xhr.setRequestHeader('Accept','application/json');
+    xhr.onreadystatechange = function(){
+      if (xhr.readyState !== 4) return;
+      try {
+        var data = JSON.parse(xhr.responseText) || {};
+        var programs   = data.programs   || [];
+        var courses    = data.courses    || [];
+        var semesters  = data.semesters  || [];
+        assignedMap    = data.assigned_map || {};
+
+        // fill program select
+        programs.forEach(function(p){
+          var opt = document.createElement('option');
+          opt.value = String(p[0]);
+          opt.textContent = p[1] + ' — ' + p[2];
+          programSel.appendChild(opt);
+        });
+
+        // store all courses (without rendering yet)
+        allCourses = courses.map(function(r){
+          return { id: String(r[0]), program: (r[1] == null ? '' : String(r[1])), label: r[2] };
+        });
+
+        // semesters
+        if (semesters.length) {
+          var html = '<option value="" disabled selected>Select Semester</option>';
+          html += semesters.map(function(r){
+            return '<option value="'+String(r[0])+'">'+r[1]+'</option>';
+          }).join('');
+          semSel.innerHTML = html;
+        } else {
+          semSel.innerHTML = '<option value="" disabled selected>No ongoing semesters.</option>';
+        }
+
+        // helper: rebuild courses based on selected Program and Semester
+        function rebuildCourses(){
+          var selectedProgram  = programSel.value ? String(programSel.value) : '';
+          var selectedSemester = semSel.value ? String(semSel.value) : '';
+
+          var exclude = {};
+          if (selectedSemester && assignedMap[selectedSemester]) {
+            assignedMap[selectedSemester].forEach(function(cid){
+              exclude[String(cid)] = true;
+            });
+          }
+
+          var currentVal = courseSel.value;
+          var optionsHtml = ['<option value="" disabled selected>Select Course</option>'];
+          var count = 0;
+
+          allCourses.forEach(function(c){
+            if (selectedProgram && c.program !== selectedProgram) return;
+            if (selectedSemester && exclude[c.id]) return;
+            optionsHtml.push('<option value="'+c.id+'" data-program="'+c.program+'">'+c.label+'</option>');
+            count++;
+          });
+
+          if (count === 0) {
+            optionsHtml = ['<option value="" disabled selected>No available courses for this semester/program.</option>'];
+          }
+
+          courseSel.innerHTML = optionsHtml.join('');
+          var stillThere = !!courseSel.querySelector('option[value="'+currentVal+'"]');
+          courseSel.value = stillThere ? currentVal : '';
+        }
+
+        programSel.onchange = function(){
+          if (semSel.value) rebuildCourses();
+        };
+
+        semSel.onchange = function(){
+          courseSel.disabled = !semSel.value;
+          rebuildCourses();
+        };
+
+      } catch(e){
+        programSel.innerHTML = '<option value="">All programs…</option>';
+        courseSel.innerHTML  = '<option value="" disabled selected>Failed to load courses.</option>';
+        courseSel.disabled   = true;
+        semSel.innerHTML     = '<option value="" disabled selected>Failed to load semesters.</option>';
+      }
+    };
+    xhr.send();
+
+    backdrop.hidden = false;
+    modal.hidden = false;
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeAssignModal(){
+    document.getElementById('assignBackdrop').hidden = true;
+    document.getElementById('assignModal').hidden = true;
+    document.body.style.overflow = '';
+  }
+  document.getElementById('assignCancel') && document.getElementById('assignCancel').addEventListener('click', closeAssignModal);
+  document.getElementById('assignClose') && document.getElementById('assignClose').addEventListener('click', closeAssignModal);
+  document.getElementById('assignBackdrop') && document.getElementById('assignBackdrop').addEventListener('click', closeAssignModal);
+
+  /* ===== Edit modal ===== */
+  var editModal    = document.getElementById('editModal');
+  var editBackdrop = document.getElementById('editBackdrop');
+  var editForm     = document.getElementById('editForm');
+
+  function openEditModal(btn){
+    var fid = btn.getAttribute('data-fid');
+
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', "{% url 'get_teacher_json' 0 %}".replace('/0/', '/' + fid + '/'), true);
+    xhr.setRequestHeader('Accept','application/json');
+    xhr.onreadystatechange = function(){
+      if (xhr.readyState !== 4) return;
+      try {
+        var data = JSON.parse(xhr.responseText);
+        if (data.error) { alert(data.error); return; }
+
+        editForm.action = "{% url 'save_teacher_json' 0 %}".replace('/0/', '/' + fid + '/');
+        editForm.first_name.value   = data.first_name || '';
+        editForm.middle_name.value  = data.middle_name || '';
+        editForm.last_name.value    = data.last_name  || '';
+        editForm.extension_name.value = data.extension_name || '';
+        editForm.email.value        = data.email      || '';
+        editForm.password.value     = '';
+
+        Array.from(editForm.role.options).forEach(function(o){
+          o.selected = (o.value === (data.role || 'teacher'));
+        });
+        var statusSel = editForm.elements['status'];
+        if (statusSel) {
+          var desired = (data.status || 'active');
+          Array.from(statusSel.options).forEach(function(o){
+            o.selected = (o.value === desired);
+          });
+        }
+
+        editModal.classList.add('show');
+        editBackdrop.style.display='block';
+        document.body.style.overflow='hidden';
+      } catch(e){
+        alert('Failed to load teacher details.');
+      }
+    };
+    xhr.send();
+  }
+  function closeEditModal(){
+    editModal.classList.remove('show');
+    editBackdrop.style.display='none';
+    document.body.style.overflow='';
+  }
+  editBackdrop.addEventListener('click', closeEditModal);
+
+  editForm && editForm.addEventListener('submit', function(e){
+    e.preventDefault();
+    var fd = new FormData(editForm);
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', editForm.action, true);
+    xhr.onreadystatechange = function(){
+      if (xhr.readyState !== 4) return;
+      try {
+        var res = JSON.parse(xhr.responseText);
+        if (!res.ok) {
+          showToast(res.error || 'Save failed.', { type:'error', timeout:2500 });
+          return;
+        }
+        showToast(res.message || 'Saved successfully.', {
+          timeout:1500,
+          then: function(){ location.reload(); }
+        });
+      } catch(e){
+        showToast('Save failed.', { type:'error', timeout:2500 });
+      }
+    };
+    xhr.send(fd);
+  });
+
+  /* ===== RFID modal ===== */
+  function openRFIDModal(teacherId, name){
+    openModal('rfidModal');
+    document.getElementById('teacherInfo').innerText = 'Assigning RFID for: ' + (name || '');
+    document.getElementById('teacherIdInput').value = teacherId;
+    document.getElementById('rfidInput').value = '';
+    document.getElementById('rfidStatus').innerText = '';
+    setTimeout(function(){ document.getElementById('rfidInput').focus(); }, 50);
+  }
+
+  document.getElementById('rfidForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    var fd = new FormData(e.target);
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', "{% url 'assign_teacher_rfid' %}", true);
+    xhr.onreadystatechange = function(){
+      if (xhr.readyState !== 4) return;
+      try {
+        var res = JSON.parse(xhr.responseText);
+        var status = document.getElementById('rfidStatus');
+        if (res.status === 'success') {
+          status.textContent = res.message;
+          setTimeout(function(){ location.reload(); }, 600);
+        } else if (res.status === 'in_use' && res.owner_type === 'faculty') {
+          status.textContent = res.message;
+          var row = document.getElementById('row-faculty-' + res.owner_id);
+          if (row) {
+            row.classList.add('row-highlight');
+            row.scrollIntoView({behavior:'smooth', block:'center'});
+          }
+        } else {
+          status.textContent = res.message || 'Failed.';
+        }
+      } catch(e){
+        alert('RFID assign failed.');
+      }
+    };
+    xhr.send(fd);
+  });
+
+  /* ===== Toasts (incl. Django messages) ===== */
+  function showToast(message, opts){
+    opts = opts || {};
+    var type = opts.type === 'error' ? 'error' : 'success';
+    var timeout = typeof opts.timeout === 'number' ? opts.timeout : 2200;
+    var then = typeof opts.then === 'function' ? opts.then : null;
+
+    var t = document.getElementById('appToast');
+    if(!t) return;
+    t.querySelector('.t-msg').textContent = message || '';
+    t.classList.toggle('error', type === 'error');
+    t.hidden = false;
+    t.querySelector('.t-icon').textContent = (type === 'error') ? '!' : '✓';
+    requestAnimationFrame(function(){ t.classList.add('show'); });
+    clearTimeout(t._timer);
+    t._timer = setTimeout(function(){
+      t.classList.remove('show');
+      setTimeout(function(){
+        t.hidden = true;
+        if (then) { try{ then(); }catch(e){} }
+      }, 180);
+    }, timeout);
+  }
+
+  (function(){
+    var box = document.getElementById('django-messages');
+    if (!box) return;
+    var items = box.querySelectorAll('.djmsg');
+    for (var i = 0; i < items.length; i++) {
+      var text = items[i].getAttribute('data-text') || '';
+      var tags = items[i].getAttribute('data-tags') || '';
+      var isError = (tags.indexOf('error') > -1) || (tags.indexOf('warning') > -1);
+      showToast(text, { type: isError ? 'error' : 'success', timeout: 2600 });
+    }
+  })();
+
+  /* ===== Loading state for Excel upload button ===== */
+  (function(){
+    var uploadForm = document.querySelector('.upload-form.upload-compact');
+    if (!uploadForm) return;
+    uploadForm.addEventListener('submit', function(){
+      var btn = uploadForm.querySelector('button[type="submit"]');
+      if (btn){
+        btn.disabled = true;
+        btn.textContent = 'Uploading...';
+      }
+    });
+  })();
+
+  /* ===== Loading state for Add Teacher submit ===== */
+  document.addEventListener('DOMContentLoaded', function () {
+    var addForm = document.getElementById('addTeacherForm');
+    if (!addForm) return;
+    addForm.addEventListener('submit', function () {
+      var submitBtn = addForm.querySelector('button[type="submit"]');
+      if (!submitBtn || submitBtn.disabled) return;
+      submitBtn.dataset.originalText = submitBtn.textContent;
+      submitBtn.textContent = 'Saving...';
+      submitBtn.disabled = true;
+    });
+  });
+function openEditModal(btn) {
+    let fid = btn.getAttribute('data-fid');
+
+    let xhr = new XMLHttpRequest();
+    xhr.open('GET', "{% url 'get_teacher_json' 0 %}".replace('/0/', '/' + fid + '/'), true);
+    xhr.onreadystatechange = function () {
+        if (xhr.readyState !== 4) return;
+
+        let data = JSON.parse(xhr.responseText);
+        if (data.error) return alert(data.error);
+
+        // Set form action
+        document.getElementById('editTeacherForm').action =
+            "{% url 'save_teacher_json' 0 %}".replace('/0/', '/' + fid + '/');
+
+        // Fill fields
+        document.getElementById('edit_first_name').value = data.first_name || "";
+        document.getElementById('edit_middle_name').value = data.middle_name || "";
+        document.getElementById('edit_last_name').value = data.last_name || "";
+        document.getElementById('edit_extension_name').value = data.extension_name || "";
+        document.getElementById('edit_email').value = data.email || "";
+        document.getElementById('edit_password').value = "";
+
+        document.getElementById('edit_role').value = data.role || "teacher";
+        document.getElementById('edit_status').value = data.status || "active";
+
+        // Show modal
+        document.getElementById('editTeacherModal').classList.add('show');
+        document.body.style.overflow = "hidden";
+    };
+    xhr.send();
+}
+
+function closeEditTeacherModal() {
+    document.getElementById('editTeacherModal').classList.remove('show');
+    document.body.style.overflow = "";
+}
+
+document.getElementById('editTeacherForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    let form = this;
+    let fd = new FormData(form);
+    let xhr = new XMLHttpRequest();
+    xhr.open('POST', form.action, true);
+    xhr.onreadystatechange = function () {
+        if (xhr.readyState !== 4) return;
+
+        let res = JSON.parse(xhr.responseText);
+        if (!res.ok) {
+            showToast(res.error, { type: "error" });
+            return;
+        }
+
+        showToast("Saved successfully.", {
+            timeout: 1200,
+            then: () => location.reload()
+        });
+    };
+    xhr.send(fd);
+});
+
+</script>
+</body>
+</html>

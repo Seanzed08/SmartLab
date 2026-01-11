@@ -1,0 +1,251 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin Dashboard | NEUST</title>
+  <link rel="stylesheet" href="{% static 'css/admin/admin-style.css' %}" />
+  <link rel="stylesheet" href="{% static 'css/admin/dashboard.css' %}" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet" />
+  
+</head>
+<body class="dashboard-page">
+<div class="dashboard-container">
+  {% include 'includes/sidebar.html' %}
+
+  <div class="main-panel">
+    {% include 'includes/header.html' %}
+
+    <section class="content-area">
+      <h2>Attendance Record</h2>
+
+      <!-- Filters -->
+      <form method="get" class="filters" id="filtersForm">
+        <select name="lab_id" onchange="this.form.submit()">
+          <option value="" {% if selected_lab_id == '' %}selected{% endif %}>All Labs</option>
+          {% for lab in labs %}
+            <option value="{{ lab.0 }}" {% if selected_lab_id == lab.0|stringformat:"s" %}selected{% endif %}>
+              Lab {{ lab.1 }}
+            </option>
+          {% endfor %}
+        </select>
+
+        <select name="teacher_id" onchange="this.form.submit()">
+          <option value="" {% if selected_teacher_id == '' %}selected{% endif %}>All Teachers</option>
+          {% for teacher in teachers %}
+            <option value="{{ teacher.0 }}" {% if selected_teacher_id == teacher.0|stringformat:"s" %}selected{% endif %}>
+              {{ teacher.1 }}
+            </option>
+          {% endfor %}
+        </select>
+
+        <input type="date" name="start_date" value="{{ start_date }}">
+        <input type="date" name="end_date" value="{{ end_date }}">
+        <button type="submit" class="apply-btn">Apply</button>
+      </form>
+
+      <!-- Export / Print controls -->
+      <div class="export-controls">
+        <!-- PRINT (merged, one PDF) -->
+        <form method="get" action="{% url 'print_queue' %}" target="_blank">
+          <input type="hidden" name="type" value="all">
+          <input type="hidden" name="lab_id" value="{{ selected_lab_id|default:'' }}">
+          <input type="hidden" name="teacher_id" value="{{ selected_teacher_id|default:'' }}">
+          <input type="hidden" name="start_date" value="{{ start_date|default:'' }}">
+          <input type="hidden" name="end_date" value="{{ end_date|default:'' }}">
+          <button type="submit" class="mini-btn">🖨 Print (All)</button>
+        </form>
+        <form method="get" action="{% url 'print_queue' %}" target="_blank">
+          <input type="hidden" name="type" value="utilization">
+          <input type="hidden" name="lab_id" value="{{ selected_lab_id|default:'' }}">
+          <input type="hidden" name="teacher_id" value="{{ selected_teacher_id|default:'' }}">
+          <input type="hidden" name="start_date" value="{{ start_date|default:'' }}">
+          <input type="hidden" name="end_date" value="{{ end_date|default:'' }}">
+          <button type="submit" class="mini-btn ghost">🖨 Print Utilization</button>
+        </form>
+        <form method="get" action="{% url 'print_queue' %}" target="_blank">
+          <input type="hidden" name="type" value="attendance">
+          <input type="hidden" name="lab_id" value="{{ selected_lab_id|default:'' }}">
+          <input type="hidden" name="teacher_id" value="{{ selected_teacher_id|default:'' }}">
+          <input type="hidden" name="start_date" value="{{ start_date|default:'' }}">
+          <input type="hidden" name="end_date" value="{{ end_date|default:'' }}">
+          <button type="submit" class="mini-btn ghost">🖨 Print Attendance</button>
+        </form>
+
+        <!-- DOWNLOAD merged single PDF (not ZIP) -->
+        <form method="get" action="{% url 'export_merged_pdf' %}">
+          <input type="hidden" name="type" value="all">
+          <input type="hidden" name="lab_id" value="{{ selected_lab_id|default:'' }}">
+          <input type="hidden" name="teacher_id" value="{{ selected_teacher_id|default:'' }}">
+          <input type="hidden" name="start_date" value="{{ start_date|default:'' }}">
+          <input type="hidden" name="end_date" value="{{ end_date|default:'' }}">
+          <button type="submit" class="mini-btn">📄 Download PDF (All)</button>
+        </form>
+        <form method="get" action="{% url 'export_merged_pdf' %}">
+          <input type="hidden" name="type" value="utilization">
+          <input type="hidden" name="lab_id" value="{{ selected_lab_id|default:'' }}">
+          <input type="hidden" name="teacher_id" value="{{ selected_teacher_id|default:'' }}">
+          <input type="hidden" name="start_date" value="{{ start_date|default:'' }}">
+          <input type="hidden" name="end_date" value="{{ end_date|default:'' }}">
+          <button type="submit" class="mini-btn ghost">📄 Download PDF (Utilization)</button>
+        </form>
+        <form method="get" action="{% url 'export_merged_pdf' %}">
+          <input type="hidden" name="type" value="attendance">
+          <input type="hidden" name="lab_id" value="{{ selected_lab_id|default:'' }}">
+          <input type="hidden" name="teacher_id" value="{{ selected_teacher_id|default:'' }}">
+          <input type="hidden" name="start_date" value="{{ start_date|default:'' }}">
+          <input type="hidden" name="end_date" value="{{ end_date|default:'' }}">
+          <button type="submit" class="mini-btn ghost">📄 Download PDF (Attendance)</button>
+        </form>
+
+        <!-- (Optional) ZIP download of individual PDFs — remove this form if you don't want ZIPs -->
+        <form method="get" action="{% url 'export_pdfs' %}">
+          <input type="hidden" name="type" value="all">
+          <input type="hidden" name="lab_id" value="{{ selected_lab_id|default:'' }}">
+          <input type="hidden" name="teacher_id" value="{{ selected_teacher_id|default:'' }}">
+          <input type="hidden" name="start_date" value="{{ start_date|default:'' }}">
+          <input type="hidden" name="end_date" value="{{ end_date|default:'' }}">
+
+        </form>
+      </div>
+
+      <!-- Attendance Table -->
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Lab</th>
+            <th>Teacher</th>
+            <th>Course</th>
+            <th>Section</th>
+            <th>Time</th>
+            <th>Semester</th>
+            <th>Present</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for r in attendance_records %}
+          <tr
+            data-util="{{ r.utilization_id }}"
+            data-date="{{ r.date }}"
+            data-time="{{ r.time_duration }}"
+            data-lab="{{ r.lab_name }}"
+            data-instructor="{{ r.teacher_name }}"
+            data-course="{{ r.course }}"
+            data-section="{{ r.section }}"
+            data-semester="{{ r.semester_text }}"
+          >
+            <td data-label="Date">{{ r.date }}</td>
+            <td data-label="Lab">{{ r.lab_name }}</td>
+            <td data-label="Teacher">{{ r.teacher_name }}</td>
+            <td data-label="Course">{{ r.course }}</td>
+            <td data-label="Section">{{ r.section }}</td>
+            <td data-label="Time">{{ r.time_duration }}</td>
+            <td data-label="Semester">{{ r.semester_text }}</td>
+            <td data-label="Students">{{ r.students_present }}</td>
+            <td data-label="Actions" class="td-actions" style="white-space:nowrap;">
+              <a href="{% url 'print_utilization_slip' r.utilization_id %}" target="_blank" class="action-btn gray-btn">Slip</a>
+              <a href="{% url 'print_attendance_sheet' r.utilization_id %}" target="_blank" class="action-btn blue-btn">Attendance</a>
+              <button type="button" class="action-btn outline btn-preview" data-id="{{ r.utilization_id }}">Preview</button>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="9">No attendance records found.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </section>
+  </div>
+</div>
+
+<!-- ===== Preview Modal ===== -->
+<div class="modal-backdrop" id="modalBackdrop"></div>
+<div class="modal" id="previewModal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <div class="modal-title">Attendance Preview</div>
+      <button class="mini-btn ghost" id="closePreview" type="button">Close</button>
+    </div>
+    <div class="modal-body" id="previewBody">
+      <div class="kv"><div class="k">Date</div><div class="v" id="pv-date">—</div></div>
+      <div class="kv"><div class="k">Time</div><div class="v" id="pv-time">—</div></div>
+      <div class="kv"><div class="k">Laboratory</div><div class="v" id="pv-lab">—</div></div>
+      <div class="kv"><div class="k">Instructor</div><div class="v" id="pv-inst">—</div></div>
+      <div class="kv"><div class="k">Course</div><div class="v" id="pv-course">—</div></div>
+      <div class="kv"><div class="k">Section</div><div class="v" id="pv-section">—</div></div>
+      <div class="kv"><div class="k">Semester</div><div class="v" id="pv-sem">—</div></div>
+      <div class="kv"><div class="k">Remarks</div><div class="v" id="pv-remarks">—</div></div>
+      <div class="kv"><div class="k">Students Present</div><div class="v" id="pv-count">0</div></div>
+      <div class="kv" style="grid-template-columns:160px 1fr;">
+        <div class="k">Students</div>
+        <div class="v" id="pv-students"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <a id="btnPrintThis" class="mini-btn ghost" target="_blank" rel="noopener">🖨 Print (This Session)</a>
+      <a id="btnOpenSlip" class="mini-btn ghost" target="_blank" rel="noopener">Slip</a>
+      <a id="btnOpenAttendance" class="mini-btn" target="_blank" rel="noopener">Attendance</a>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const $ = s => document.querySelector(s);
+  const $$ = s => Array.from(document.querySelectorAll(s));
+  const modal = $("#previewModal");
+  const backdrop = $("#modalBackdrop");
+  let currentUtilId = null;
+
+  function openModal(){ modal.style.display='flex'; backdrop.style.display='block'; }
+  function closeModal(){ modal.style.display='none'; backdrop.style.display='none'; }
+
+  $("#closePreview").addEventListener('click', closeModal);
+  backdrop.addEventListener('click', closeModal);
+
+  $$(".btn-preview").forEach(btn=>{
+    btn.addEventListener('click', async (e)=>{
+      const tr = e.target.closest('tr');
+      currentUtilId = tr.dataset.util;
+
+      $("#pv-date").textContent = tr.dataset.date || '—';
+      $("#pv-time").textContent = tr.dataset.time || '—';
+      $("#pv-lab").textContent  = tr.dataset.lab  || '—';
+      $("#pv-inst").textContent = tr.dataset.instructor || '—';
+      $("#pv-course").textContent = tr.dataset.course || '—';
+      $("#pv-section").textContent = tr.dataset.section || '—';
+      $("#pv-sem").textContent = tr.dataset.semester || '—';
+
+      // Row action links
+      // we use the URL with a placeholder 0 and replace it — keep this unless your URL format differs
+      $("#btnOpenSlip").href = "{% url 'print_utilization_slip' 0 %}".replace('/0/', `/${currentUtilId}/`);
+      $("#btnOpenAttendance").href = "{% url 'print_attendance_sheet' 0 %}".replace('/0/', `/${currentUtilId}/`);
+      $("#btnPrintThis").href = "{% url 'print_queue_single' %}?utilization_id="+encodeURIComponent(currentUtilId)+"&type=both";
+
+      // Load details for Processed By / Remarks / Students
+      try{
+        const url = "{% url 'attendance_preview_api' %}?utilization_id="+encodeURIComponent(currentUtilId);
+        const res = await fetch(url, {headers:{'X-Requested-With':'fetch'}});
+        const data = await res.json();
+
+        $("#pv-remarks").textContent   = data.remarks || '—';
+        $("#pv-count").textContent     = data.students_present || 0;
+
+        const box = $("#pv-students"); box.innerHTML='';
+        (data.students||[]).forEach(name=>{
+          const span = document.createElement('span');
+          span.className='chip'; span.textContent = name;
+          box.appendChild(span);
+        });
+      }catch(err){
+        console.error(err);
+      }
+
+      openModal();
+    });
+  });
+})();
+</script>
+</body>
+</html>

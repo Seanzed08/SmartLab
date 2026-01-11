@@ -1,0 +1,152 @@
+{% load static %}  <!-- Django static files for logo -->
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>NEUST Lab Attendance Sheet</title>
+  <style>
+    .line { display: inline-block; border-bottom: 1px solid #000; vertical-align: text-bottom; }
+    .line.short { width: 100px; }
+    .line.medium { width: 200px; }
+    .line.long { width: 100vh; }
+    table { width: 100%; border-collapse: collapse; font-size: 9pt; }
+    .attendance-table th, .attendance-table td { border: 1px solid #000; padding: 1.5px; }
+    .attendance-table th { text-align: center; }
+    .attendance-table td.num { width: 10%; text-align: center; }
+    .attendance-table td.name { width: 70%; text-align: left; }
+    .attendance-table td.sign { width: 20%; text-align: center; }
+    .approval-table th, .approval-table td { border: 1px solid #000; padding: 2px; text-align: center; }
+    @page { size: A4 portrait; margin: 8mm; }
+    @media print {
+      html, body { width: 205mm; height: 297mm; margin: 5; padding: 0; }
+      table { page-break-inside: avoid; }
+      tr { page-break-inside: avoid; }
+      thead { display: table-header-group; }
+      @page { margin: 0; size: A4 portrait; }
+      body::before, body::after { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<table style="width:100%; margin-bottom: 8px;">
+  <tr>
+    <td style="text-align: center; vertical-align: middle;">
+      <div style="display: flex; align-items: center; justify-content: center;">
+        <img src="{% static 'img/neust-logo.png' %}" alt="NEUST Logo" style="width:60px; height:auto; margin-right: 10px;">
+        <div>
+          <div style="font-weight:bold; font-size:10.5pt;">
+            Republic of the Philippines<br>
+            NUEVA ECIJA UNIVERSITY OF SCIENCE AND TECHNOLOGY
+          </div>
+          <div style="font-weight:bold; font-size:11.5pt; margin-top:3px;">
+            COMPUTER LABORATORY ATTENDANCE SHEET <span style="font-weight:normal;">(FORM 1)</span>
+          </div>
+          <div style="font-style: italic; font-size:9.5pt;">
+            (FOR REGULAR CLASSES)
+          </div>
+        </div>
+      </div>
+    </td>
+  </tr>
+</table>
+
+<table style="width:100%; margin-bottom: 7px;">
+  <tr>
+    <td colspan="2">
+      Semester &amp; Academic Year:                                   
+      <span class="line long">{% if semester_ay %}{{ semester_ay }}{% else %}&nbsp;{% endif %}</span>
+    </td>
+    <td style="text-align:left;">
+      Date:
+      <span class="line medium">{% if request_date %}{{ request_date }}{% else %}&nbsp;{% endif %}</span>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="3">
+      Name of Instructor&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:
+      <span class="line medium">{% if instructor_name %}{{ instructor_name }}{% else %}&nbsp;{% endif %}</span> Signature:<span class="line short">&nbsp;</span>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="3">
+      Course&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:
+      <span class="line long">{% if course_name %}{{ course_name }}{% else %}&nbsp;{% endif %}</span>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="3">
+      Year and Section&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:
+      <span class="line long">{% if year_section %}{{ year_section }}{% else %}&nbsp;{% endif %}</span>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="3">
+      Laboratory Room Number:
+      <span class="line long">{% if room_number %}{{ room_number }}{% else %}&nbsp;{% endif %}</span>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="3">
+      Date and Time &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:
+      <span class="line long">{% if date_time %}{{ date_time }}{% else %}&nbsp;{% endif %}</span>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="3">
+      Laboratory Assistant &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:
+      <span class="line medium">&nbsp;</span> Signature:<span class="line short">&nbsp;</span>
+    </td>
+  </tr>
+</table>
+
+<table class="attendance-table">
+  <thead>
+    <tr>
+      <th>Computer No.</th>
+      <th>Name of Student</th>
+      <th>Signature</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for i in range %}
+    <tr>
+      <td class="num">{{ i }}</td>
+      <td class="name">{% if students|length >= i %}{{ students|slice:i|last }}{% else %}&nbsp;{% endif %}</td>
+      <td class="sign"></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<table class="approval-table" style="margin-top:8px;">
+  <thead>
+    <tr>
+      <th>Action</th>
+      <th>Name</th>
+      <th>Designation</th>
+      <th>Signature</th>
+      <th>Date</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Requested</td>
+      <td>{% if instructor_name %}{{ instructor_name }}{% else %}&nbsp;{% endif %}</td>
+      <td>Instructor</td>
+      <td></td>
+      <td>{% if request_date %}{{ request_date }}{% else %}&nbsp;{% endif %}</td>
+    </tr>
+    <tr>
+      <td>Processed</td>
+      <td>{% if lab_assistant_name %}{{ lab_assistant_name }}{% else %}&nbsp;{% endif %}</td>
+      <td>Lab Assistant</td>
+      <td></td>
+      <td>{% if request_date %}{{ request_date }}{% else %}&nbsp;{% endif %}</td>
+    </tr>
+  </tbody>
+</table>
+
+<p style="font-size:8.5pt; margin-top:5px;">NEUST-MIS-F018<br>Rev. 00 (09.18.2024)</p>
+
+</body>
+</html>

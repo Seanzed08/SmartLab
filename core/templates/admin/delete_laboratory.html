@@ -1,0 +1,22 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Delete Laboratory | NEUST Admin</title>
+  <link rel="stylesheet" href="{% static 'css/admin/admin-style.css' %}">
+</head>
+<body>
+  <div class="form-container">
+    <h2>Confirm Deletion</h2>
+    <p>Are you sure you want to delete <strong>Lab {{ lab.lab_num }}</strong> located at <strong>{{ lab.location }}</strong>?</p>
+    <p>This will also delete all computers associated with this lab.</p>
+    
+    <form method="POST">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-delete">Yes, Delete</button>
+      <a href="{% url 'manage_laboratories' %}" class="btn btn-cancel">Cancel</a>
+    </form>
+  </div>
+</body>
+</html>

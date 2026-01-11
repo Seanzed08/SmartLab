@@ -1,0 +1,67 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Edit Student | NEUST Admin</title>
+  <link rel="stylesheet" href="{% static 'css/admin/admin-style.css' %}" />
+  <link rel="stylesheet" href="{% static 'css/admin/edit_student.css' %}" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div class="dashboard-container">
+    {% include 'includes/sidebar.html' %}
+    <div class="main-panel">
+      {% include 'includes/header.html' %}
+
+      <section class="content-area">
+        <h2>Edit Student</h2>
+
+        <form method="POST" class="edit-student-form">
+          {% csrf_token %}
+          <div class="form-group">
+            <label>First Name</label>
+            <input type="text" name="first_name" value="{{ student.first_name }}" required>
+          </div>
+
+          <div class="form-group">
+            <label>Middle Name</label>
+            <input type="text" name="middle_name" value="{{ student.middle_name }}">
+          </div>
+
+          <div class="form-group">
+            <label>Last Name</label>
+            <input type="text" name="last_name" value="{{ student.last_name }}" required>
+          </div>
+
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" name="email" value="{{ student.email }}" required>
+          </div>
+
+          <div class="form-group">
+            <label>Password <small class="note">Leave blank to keep current password</small></label>
+            <input type="password" name="password" placeholder="••••••••••">
+          </div>
+
+          <div class="form-group">
+            <label>Student Number</label>
+            <input type="text" name="stud_num" value="{{ student.stud_num }}" required>
+          </div>
+
+          <div class="form-group">
+            <label>RFID Code</label>
+            <input type="text" name="rfid" value="{{ student.rfid }}" placeholder="Scan or type RFID">
+            <small class="note">Leave empty to clear RFID assignment.</small>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-save">Save Changes</button>
+            <a href="{% url 'manage_students' %}" class="btn btn-cancel">Cancel</a>
+          </div>
+        </form>
+      </section>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,89 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Student RFID Card</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f9;
+      padding: 40px;
+      text-align: center;
+    }
+
+    .card {
+      display: inline-block;
+      padding: 30px 40px;
+      border: 2px solid #2c3e50;
+      border-radius: 10px;
+      background: #fff;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+      width: 350px;
+    }
+
+    .card h2 {
+      margin-top: 0;
+      font-size: 22px;
+      color: #2c3e50;
+    }
+
+    .rfid-box {
+      margin: 20px 0;
+      padding: 15px;
+      font-size: 22px;
+      font-weight: bold;
+      border: 2px dashed #333;
+      background: #f0f0f0;
+      letter-spacing: 1px;
+    }
+
+    p {
+      margin: 6px 0;
+      font-size: 15px;
+      color: #333;
+    }
+
+    .print-btn {
+      margin-top: 25px;
+      padding: 10px 20px;
+      font-size: 14px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: 0.2s ease;
+    }
+
+    .print-btn:hover {
+      background-color: #0056b3;
+    }
+
+    @media print {
+      .print-btn {
+        display: none;
+      }
+
+      body {
+        background: white;
+      }
+
+      .card {
+        box-shadow: none;
+        border: 1px solid #000;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Student RFID Card</h2>
+    <div class="rfid-box">{{ student.rfid }}</div>
+    <p><strong>Name:</strong> {{ student.first_name }} {{ student.middle_name }} {{ student.last_name }}</p>
+    <p><strong>Student No:</strong> {{ student.stud_num }}</p>
+    <p><strong>Email:</strong> {{ student.email }}</p>
+    <button class="print-btn" onclick="window.print()">Print</button>
+  </div>
+</body>
+</html>

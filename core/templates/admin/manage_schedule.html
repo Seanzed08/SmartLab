@@ -1,0 +1,621 @@
+{% load static %}
+{% load custom_filters %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Lab Reservations | NEUST Admin</title>
+  <link rel="icon" href="{% static 'img/favicon.ico' %}">
+  <link rel="stylesheet" href="{% static 'css/admin/admin-style.css' %}" />
+  <link rel="stylesheet" href="{% static 'css/admin/manage_schedule.css' %}" />
+</head>
+<body class="dashboard-page">
+<div class="dashboard-container">
+  {% include 'includes/sidebar.html' %}
+
+  <div class="main-panel">
+    {% include 'includes/header.html' %}
+
+    <section class="content-area" id="contentArea">
+      <!-- Header -->
+      <div class="schedule-header">
+        <h2 class="weekly-title">Lab Reservations</h2>
+        <div class="schedule-toolbar">
+          <button type="button" id="openRequestBtn" class="btn ghost">
+            View Requests <span id="pendingCountBadge" class="badge-count">{{ pending_count }}</span>
+          </button>
+          <button type="button" id="openCreateBtn" class="btn primary">+ Create Schedule</button>
+        </div>
+      </div>
+
+      <!-- Lab selector -->
+      <div class="card" style="padding:12px; margin-bottom:12px;">
+        <form method="get" style="display:flex; align-items:center; gap:10px;">
+          <label for="lab_id" style="font-weight:700; color:#1f2937;">Select Laboratory:</label>
+          <select name="lab_id" id="lab_id">
+            {% for lab in labs %}
+              <option value="{{ lab.0 }}" {% if lab.0 == selected_lab %}selected{% endif %}>Lab {{ lab.1 }}</option>
+            {% endfor %}
+          </select>
+
+            <span class="schedule-legend inline" aria-label="Legend">
+              <span class="legend-item"><i class="legend-swatch sched"></i> Scheduled</span>
+              <span class="legend-item"><i class="legend-swatch req"></i> Request</span>
+              <span class="legend-item"><i class="legend-swatch active"></i> Active</span>
+            </span>
+        </form>
+      </div>
+
+      <!-- Week navigation -->
+      <div class="week-navigation">
+        <div>
+          <h3 style="margin:0; font-size:22px; color:#0f172a;">Weekly Lab Schedule</h3>
+          <p class="week-range" id="pageWeekRange">{{ week_range_display }}</p>
+        </div>
+        <div class="week-buttons">
+          <a href="#" id="pagePrevWeek" class="btn">← Previous Week</a>
+          <a href="#" id="pageNextWeek" class="btn">Next Week →</a>
+        </div>
+      </div>
+
+      <!-- MAIN SCHEDULE -->
+      <div class="schedule-grid">
+        <table class="weekly-schedule" id="mainGrid">
+          <thead>
+            <tr>{% for day in days %}<th>{{ day }}</th>{% endfor %}</tr>
+          </thead>
+          <tbody>
+            <tr>
+              {% for day in days %}
+              <td class="day-cell" data-day="{{ day }}">
+                <!-- SCHEDULES -->
+                <div class="cell-section">
+                  <div class="cell-title with-line">
+                    <span>Schedules</span><i></i>
+                  </div>
+                  <div class="list schedules"></div>
+                </div>
+
+                <!-- REQUESTS -->
+                <div class="cell-section">
+                  <div class="cell-title with-line alt">
+                    <span>Requests</span><i></i>
+                  </div>
+                  <div class="list requests"></div>
+                </div>
+              </td>
+              {% endfor %}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- CREATE SCHEDULE MODAL -->
+      <div id="createOverlay" class="modal-overlay" aria-hidden="true">
+        <div class="modal-content two-col">
+          <div class="modal-header">
+            <h3>Create Schedule (Admin)</h3>
+            <div style="display:flex; gap:8px;">
+              <button type="button" id="modalPrevWeek" class="btn ghost">← Previous</button>
+              <button type="button" id="modalNextWeek" class="btn ghost">Next →</button>
+            </div>
+            <button type="button" class="close-x" data-close="#createOverlay" aria-label="Close">×</button>
+          </div>
+
+          <div class="modal-body">
+            <!-- Form -->
+            <form method="POST" action="{% url 'admin_create_schedule' %}" id="adminCreateForm" class="schedule-form">
+              {% csrf_token %}
+              <div>
+                <label>Faculty</label>
+                <select name="faculty_id" id="facultySelect" required>
+                  <option value="">-- Select Faculty --</option>
+                  {% for fid, fname in faculties %}
+                    <option value="{{ fid }}">{{ fname }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <div>
+                <label>Course</label>
+                <select name="course_id" id="courseSelect" required>
+                  <option value="">-- Select Course --</option>
+                </select>
+              </div>
+
+              <div>
+                <label>Laboratory</label>
+                <select name="lab_id" id="labSelect" required>
+                  <option value="">-- Select Lab --</option>
+                  {% for lab in labs %}
+                    <option value="{{ lab.0 }}" {% if lab.0 == selected_lab %}selected{% endif %}>Lab {{ lab.1 }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <div>
+                <div class="form-subtitle">Select Days</div>
+                <div class="checkbox-group" id="daysGroup">
+                  {% for d in days %}<label><input type="checkbox" name="days" value="{{ d }}"> {{ d }}</label>{% endfor %}
+                </div>
+              </div>
+
+              <div class="grid-2">
+                <div>
+                  <label>Start Date</label>
+                  <input type="date" name="start_date" id="startDate" required value="{{ base_week }}">
+                </div>
+                <div>
+                  <label>End Date</label>
+                  <input type="date" name="end_date" id="endDate" required value="{{ base_week }}">
+                </div>
+              </div>
+
+              <div class="grid-2">
+                <div>
+                  <label>Start Time</label>
+                  <input type="time" name="start_time" required>
+                </div>
+                <div>
+                  <label>End Time</label>
+                  <input type="time" name="end_time" required>
+                </div>
+              </div>
+
+              <div>
+                <label>Year & Section</label>
+                <input type="text" name="student_year_and_section" placeholder="e.g., BSIT-2A" required>
+              </div>
+
+              <div class="modal-actions">
+                <button type="submit" class="btn primary">Submit</button>
+                <button type="button" class="btn ghost" data-close="#createOverlay">Cancel</button>
+              </div>
+            </form>
+
+            <!-- Preview (mini grid) -->
+            <div class="preview-pane" id="rightPane">
+              <div class="preview-header">
+                <div class="ph-title">Selected Lab — Preview</div>
+                <div class="ph-range" id="labWeekRange">{{ week_range_display }}</div>
+              </div>
+              <div class="preview-scroll">
+                <table class="weekly-schedule mini" id="modalGrid">
+                  <thead><tr>{% for d in days %}<th>{{ d }}</th>{% endfor %}</tr></thead>
+                  <tbody>
+                    <tr>
+                      {% for d in days %}
+                      <td class="day-cell" data-day="{{ d }}">
+                        <div class="cell-section">
+                          <div class="cell-title with-line">
+                            <span>Schedules</span><i></i>
+                          </div>
+                          <div class="list schedules"></div>
+                        </div>
+                        <div class="cell-section">
+                          <div class="cell-title with-line alt">
+                            <span>Requests</span><i></i>
+                          </div>
+                          <div class="list requests"></div>
+                        </div>
+                      </td>
+                      {% endfor %}
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div id="toastInCreate" class="toast in-modal" aria-live="assertive" aria-atomic="true" style="display:none"></div>
+        </div>
+      </div>
+
+      <!-- VIEW REQUESTS MODAL -->
+      <div id="requestsOverlay" class="modal-overlay" aria-hidden="true">
+        <div class="modal-content modal-requests">
+          <div class="modal-header">
+            <h3>View Requests ({{ reservations|length }})</h3>
+            <button type="button" class="close-x" data-close="#requestsOverlay" aria-label="Close">×</button>
+          </div>
+
+          <div class="modal-body modal-requests-body">
+            <div class="filters">
+              <button class="btn primary sm req-filter active" data-status="">All</button>
+              <button class="btn primary sm req-filter" data-status="Pending">Pending</button>
+              <button class="btn primary sm req-filter" data-status="Approved">Approved</button>
+              <button class="btn primary sm req-filter" data-status="Rejected">Rejected</button>
+            </div>
+
+            <div class="card requests-table-wrap">
+              <table class="weekly-schedule compact" id="requestsTable" style="border-radius:12px;">
+                <thead>
+                  <tr>
+                    <th>Requestor</th><th>Lab</th><th>Day</th><th>Date</th>
+                    <th>Start</th><th>End</th><th>Section</th><th>Course</th><th>Status</th><th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for res in reservations %}
+                  <tr data-status="{{ res.status|lower }}">
+                    <td>{{ res.name }}</td>
+                    <td>{{ res.lab }}</td>
+                    <td>{{ res.day_name }}</td>
+                    <td>{{ res.date|date:"M d, Y" }}</td>
+                    <td class="td-start">{{ res.start_time }}</td>
+                    <td class="td-end">{{ res.end_time }}</td>
+                    <td>{{ res.year_section }}</td>
+                    <td>{{ res.course }}</td>
+                    <td>
+                      {% if res.status == 'Pending' %}
+                        <span class="status-badge pending">Pending</span>
+                      {% elif res.status == 'Approved' %}
+                        <span class="status-badge approved">Approved</span>
+                      {% else %}
+                        <span class="status-badge rejected">Rejected</span>
+                      {% endif %}
+                    </td>
+                    <td class="actions-cell">
+                      {% if res.status == 'Pending' %}
+                        <div class="actions-wrap">
+                          <form method="post" action="{% url 'admin_approve_reservation' res.id %}" class="inline">{% csrf_token %}
+                            <button class="btn green sm" type="submit">Approve</button>
+                          </form>
+                          <form method="post" action="{% url 'admin_reject_reservation' res.id %}" class="inline">{% csrf_token %}
+                            <button class="btn red sm" type="submit">Reject</button>
+                          </form>
+                        </div>
+                      {% elif res.status == 'Approved' %}
+                        <span class="btn green sm" style="pointer-events:none;">Approved</span>
+                      {% else %}
+                        <span class="btn red sm" style="pointer-events:none;">Rejected</span>
+                      {% endif %}
+                    </td>
+                  </tr>
+                  {% empty %}
+                  <tr><td colspan="10" class="empty-row">No requests found.</td></tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+
+            <div class="modal-actions">
+              <button type="button" class="btn ghost sm" data-close="#requestsOverlay">Close</button>
+            </div>
+          </div>
+
+          <div id="toastInRequests" class="toast in-modal" aria-live="assertive" aria-atomic="true" style="display:none"></div>
+        </div>
+      </div>
+
+      <!-- Global toast -->
+      <div id="toast" class="toast" aria-live="assertive" aria-atomic="true"></div>
+
+      <!-- Data blobs -->
+      <script id="faculty-courses-json" type="application/json">{{ faculty_courses_json|safe }}</script>
+      <script id="admin-config" type="application/json">{{ config_json|safe }}</script>
+    </section>
+  </div>
+</div>
+
+<script>
+(function(){
+  /* ======================= CONFIG + DATA ======================= */
+  var CFG = {}; var FACULTY_COURSES = {};
+  try { CFG = JSON.parse(document.getElementById('admin-config').textContent || '{}'); } catch(e){}
+  try { FACULTY_COURSES = JSON.parse(document.getElementById('faculty-courses-json').textContent || '{}'); } catch(e){}
+  var BASE_WEEK = CFG.base_week || "{{ base_week|default:'' }}";
+  var WEEK_URL  = CFG.week_url || "{{ week_url }}";
+  var contentEl = document.getElementById('contentArea');
+
+  /* ======================= TOAST ======================= */
+  function showToast(message, opts){
+    var t = (opts && opts.inModalId) ? document.getElementById(opts.inModalId) : document.getElementById('toast');
+    if (!t) return;
+    t.textContent = message; t.style.display = 'block'; void t.offsetHeight;
+    t.classList.add('show');
+    setTimeout(function(){ t.classList.remove('show'); setTimeout(function(){ t.style.display='none'; }, 250); }, (opts && opts.duration)||3000);
+  }
+
+  /* ======================= TIME HELPERS (12H) ======================= */
+  function to12h(val){
+    if (!val) return '—';
+    var s = String(val).trim();
+    var m = s.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+    if (!m) return s;
+    var h = parseInt(m[1],10), min = m[2];
+    var suf = (h>=12)?'PM':'AM';
+    h = h%12; if (h===0) h=12;
+    return h + ':' + min + ' ' + suf;
+  }
+  function rangeTo12h(range){
+    if (!range) return '—';
+    var p = range.split('-').map(function(x){ return x.trim(); });
+    if (p.length !== 2) return range;
+    return to12h(p[0]) + ' - ' + to12h(p[1]);
+  }
+
+  /* ======================= MODAL MANAGER ======================= */
+  var ModalManager = (function(){
+    var current = null, outsideHandler=null, escHandler=null;
+    function lockBody(lock){ contentEl.classList.toggle('modal-open', !!lock); }
+    function open(overlay){
+      if (!overlay) return;
+      if (current && current !== overlay) close();
+      overlay.style.display = 'flex';
+      overlay.setAttribute('aria-hidden', 'false');
+      current = overlay; lockBody(true);
+      outsideHandler = function(e){ if (e.target === overlay) close(); };
+      escHandler = function(e){ if (e.key === 'Escape'){ e.preventDefault(); close(); } };
+      window.addEventListener('click', outsideHandler);
+      window.addEventListener('keydown', escHandler);
+    }
+    function close(){
+      if (!current) return;
+      current.style.display = 'none';
+      current.setAttribute('aria-hidden', 'true');
+      lockBody(false);
+      window.removeEventListener('click', outsideHandler);
+      window.removeEventListener('keydown', escHandler);
+      outsideHandler = escHandler = null;
+      current = null;
+
+      var url = new URL(window.location.href);
+      url.searchParams.delete('open');
+      url.searchParams.delete('status');
+      history.replaceState({}, '', url.pathname + (url.search ? url.search : '') + window.location.hash);
+    }
+    return { open, close };
+  })();
+
+  /* ======================= FACULTY → COURSES ======================= */
+  (function(){
+    var fSel = document.getElementById('facultySelect');
+    var cSel = document.getElementById('courseSelect');
+    function populate(fid){
+      if (!cSel) return;
+      cSel.innerHTML = '<option value="">-- Select Course --</option>';
+      var list = FACULTY_COURSES[String(fid)] || [];
+      for (var i=0; i<list.length; i++){
+        var opt = document.createElement('option'); opt.value = list[i].id; opt.textContent = list[i].code || ('Course #' + list[i].id);
+        cSel.appendChild(opt);
+      }
+    }
+    if (fSel) fSel.addEventListener('change', function(){ populate(this.value); });
+  })();
+
+  /* ======================= GRID ======================= */
+  function clearGrid(rootId){
+    var grid = document.getElementById(rootId); if (!grid) return;
+    grid.querySelectorAll('.day-cell .list.schedules, .day-cell .list.requests').forEach(function(w){ w.innerHTML=''; });
+  }
+  function shortName(name){
+    if (!name) return '';
+    var parts = name.trim().split(/\s+/);
+    if (parts.length === 1) return parts[0];
+    var first = parts[0], last = parts[parts.length-1];
+    return (first ? (first[0].toUpperCase() + '. ') : '') + last;
+  }
+  function escapeHtml(s){
+    return String(s ?? '').replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]); });
+  }
+
+  function makeEntryBlockSchedule(e, small){
+    var div = document.createElement('div'); div.className = 'entry-block schedule' + (small ? ' small' : '');
+    if (e.date)  div.dataset.date  = e.date;
+    if (e.start) div.dataset.start = e.start;
+    if (e.end)   div.dataset.end   = e.end;
+    if (e.faculty_id != null) div.dataset.faculty = String(e.faculty_id);
+
+    var teacherFull = e.teacher || e.teacher_full || '';
+    var teacher = e.teacher_short || (teacherFull ? shortName(teacherFull) : '');
+    var code = (e.course || '').toString().trim();
+    if (code.indexOf(' ') > -1) code = code.split(' ')[0];
+
+    var timeTxt = (e.time && String(e.time).trim()) ? String(e.time) : '';
+    var displayTime = (timeTxt.includes('AM') || timeTxt.includes('PM')) ? timeTxt : rangeTo12h(timeTxt);
+
+    div.innerHTML =
+      (teacher ? '<div class="title eb-teacher">' + escapeHtml(teacher) + '</div>' : '') +
+      (code ? '<div class="meta eb-course">' + escapeHtml(code) + '</div>' : '') +
+      (e.section ? '<div class="meta eb-course">' + escapeHtml(e.section) + '</div>' : '') +
+      '<div class="meta eb-time">' + escapeHtml(displayTime || '—') + '</div>';
+    return div;
+  }
+  function makeEntryBlockRequest(r, small){
+    var div = document.createElement('div'); div.className = 'entry-block request' + (small ? ' small' : '');
+    if (r.date)  div.dataset.date  = r.date;
+    if (r.start) div.dataset.start = r.start;
+    if (r.end)   div.dataset.end   = r.end;
+
+    var courseCode = (r.course ?? '').toString().trim();
+    if (courseCode.indexOf(' ') > -1) courseCode = courseCode.split(' ')[0];
+
+    var byName = r.requested_by_short || r.requested_by || '';
+    var timeTxt = (r.time && String(r.time).trim()) ? String(r.time) : '';
+    var displayTime = (timeTxt.includes('AM') || timeTxt.includes('PM')) ? timeTxt : rangeTo12h(timeTxt);
+    var by = byName ? ' • by ' + escapeHtml(byName) : '';
+
+    div.innerHTML =
+      '<div class="title eb-teacher">Request: ' + escapeHtml(r.status || 'Pending') + '</div>' +
+      (courseCode ? '<div class="meta eb-course">' + escapeHtml(courseCode) + '</div>' : '') +
+      (r.section ? '<div class="meta eb-course">' + escapeHtml(r.section) + '</div>' : '') +
+      '<div class="meta eb-time">' + escapeHtml(displayTime || '—') + by + '</div>';
+    return div;
+  }
+
+  function renderIntoGrid(gridId, data, small){
+    var grid = document.getElementById(gridId); if (!grid) return;
+    var days = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+    for (var di=0; di<days.length; di++){
+      var day=days[di], td=grid.querySelector('td.day-cell[data-day="'+day+'"]'); if (!td) continue;
+      var sw=td.querySelector('.list.schedules'), rw=td.querySelector('.list.requests'); if(!sw||!rw) continue;
+
+      var used=new Set();
+      (data.time_slots||[]).forEach(function(slot){
+        (data.entries[day]&&data.entries[day][slot]||[]).forEach(function(e){
+          if (e && e.time && !(String(e.time).includes('AM') || String(e.time).includes('PM'))) e.time = rangeTo12h(e.time);
+          sw.appendChild(makeEntryBlockSchedule(e, small));
+        });
+        (data.req_entries[day]&&data.req_entries[day][slot]||[]).forEach(function(r){
+          if (r && r.time && !(String(r.time).includes('AM') || String(r.time).includes('PM'))) r.time = rangeTo12h(r.time);
+          rw.appendChild(makeEntryBlockRequest(r, small));
+        });
+        if ((data.entries[day]&&data.entries[day][slot]||[]).length || (data.req_entries[day]&&data.req_entries[day][slot]||[]).length) used.add(slot);
+      });
+      if (data.entries[day]) Object.keys(data.entries[day]).forEach(function(slot){
+        if(!used.has(slot)) (data.entries[day][slot]||[]).forEach(function(e){
+          if (e && e.time && !(String(e.time).includes('AM') || String(e.time).includes('PM'))) e.time = rangeTo12h(e.time);
+          sw.appendChild(makeEntryBlockSchedule(e, small));
+        });
+      });
+      if (data.req_entries[day]) Object.keys(data.req_entries[day]).forEach(function(slot){
+        if(!used.has(slot)) (data.req_entries[day][slot]||[]).forEach(function(r){
+          if (r && r.time && !(String(r.time).includes('AM') || String(r.time).includes('PM'))) r.time = rangeTo12h(r.time);
+          rw.appendChild(makeEntryBlockRequest(r, small));
+        });
+      });
+    }
+  }
+
+  /* ======================= DATA FETCHERS ======================= */
+  function fetchWeekData(labId, weekStr, includeRequests, cb){
+    var params = new URLSearchParams(); params.set('lab_id', labId);
+    if (weekStr) params.set('week', weekStr); if (includeRequests) params.set('include_requests','1');
+    fetch((WEEK_URL||"{{ week_url }}")+"?"+params.toString(), { headers:{'X-Requested-With':'XMLHttpRequest'} })
+      .then(function(res){ if(!res.ok) throw new Error('Network'); return res.json(); })
+      .then(function(json){ cb(null,json); })
+      .catch(function(err){ cb(err); });
+  }
+  function reloadMainGrid(){
+    var labId=document.getElementById('lab_id').value, range=document.getElementById('pageWeekRange');
+    clearGrid('mainGrid');
+    fetchWeekData(labId, BASE_WEEK, true, function(err, data){
+      if (err){ showToast('Failed to load weekly grid'); return; }
+      if (data.week_range && range) range.textContent=data.week_range;
+      renderIntoGrid('mainGrid', data, true);
+      fetchActiveSessions();
+    });
+  }
+  function reloadModalGrid(){
+    var labSel=document.getElementById('labSelect'), labId=labSel&&labSel.value?labSel.value:document.getElementById('lab_id').value;
+    clearGrid('modalGrid');
+    fetchWeekData(labId, BASE_WEEK, true, function(err, data){
+      if (err){ showToast('Failed to load preview', { inModalId:'toastInCreate' }); return; }
+      var range=document.getElementById('labWeekRange'); if (data.week_range && range) range.textContent=data.week_range;
+      renderIntoGrid('modalGrid', data, true);
+    });
+  }
+
+  /* ======================= ACTIVE SESSION HIGHLIGHT ======================= */
+  function parseTimeToSec(str){ var p=(str||"0:0:0").split(':'); return (parseInt(p[0],10)||0)*3600+(parseInt(p[1],10)||0)*60+(parseInt(p[2],10)||0); }
+  function fetchActiveSessions(){
+    var labId=document.getElementById('lab_id').value;
+    fetch("{% url 'get_active_sessions' %}?lab_id="+encodeURIComponent(labId))
+      .then(function(res){ return res.json(); })
+      .then(function(data){
+        document.querySelectorAll('.entry-block').forEach(function(el){ el.classList.remove('active-session'); });
+        (data.active_sessions||[]).forEach(function(ses){
+          var sDate = ses.date, sStart=parseTimeToSec(ses.start_time||"00:00:00"), sEnd=parseTimeToSec(ses.end_time||"00:00:00"), sFaculty=String(ses.faculty_id);
+          document.querySelectorAll('.entry-block[data-date]').forEach(function(el){
+            var bDate=el.dataset.date, bFaculty=el.dataset.faculty, st=el.dataset.start, et=el.dataset.end;
+            if(!st||!et) return; var bStart=parseTimeToSec(st), bEnd=parseTimeToSec(et);
+            if (sDate===bDate && sFaculty===bFaculty && sEnd>=bStart && sStart<=bEnd) el.classList.add('active-session');
+          });
+        });
+      }).catch(function(){});
+  }
+
+  /* ======================= PENDING BADGE ======================= */
+  function updatePendingBadge(){
+    var labId = document.getElementById('lab_id').value;
+    var badge = document.getElementById('pendingCountBadge');
+    if (!badge) return;
+    fetch("{% url 'admin_pending_requests' %}?lab_id="+encodeURIComponent(labId))
+      .then(function(res){ return res.json(); })
+      .then(function(data){
+        var items = (data && data.items) ? data.items : [];
+        badge.textContent = items.length;
+      })
+      .catch(function(){});
+  }
+
+  /* ======================= REQUESTS FILTER (client-side) ======================= */
+  function setReqFilter(status){
+    var table = document.getElementById('requestsTable');
+    if (!table) return;
+    var want = (status||'').toLowerCase();
+    table.querySelectorAll('tbody tr').forEach(function(tr){
+      var s = (tr.getAttribute('data-status')||'').toLowerCase();
+      var show = !want || s === want;
+      tr.style.display = show ? '' : 'none';
+    });
+    document.querySelectorAll('.req-filter').forEach(function(b){
+      b.classList.toggle('active', (b.getAttribute('data-status')||'').toLowerCase()===want);
+    });
+  }
+
+  /* ======================= OPENERS ======================= */
+  function openCreate(){ ModalManager.open(document.getElementById('createOverlay')); reloadModalGrid(); }
+  function openRequests(){
+    ModalManager.open(document.getElementById('requestsOverlay'));
+    document.querySelectorAll('#requestsTable tbody tr').forEach(function(tr){
+      var tds = tr.querySelectorAll('td');
+      if (tds.length >= 6){
+        tds[4].textContent = to12h(tds[4].textContent);
+        tds[5].textContent = to12h(tds[5].textContent);
+      }
+    });
+    setReqFilter(document.querySelector('.req-filter.active')?.getAttribute('data-status') || '');
+  }
+
+  document.getElementById('openCreateBtn')?.addEventListener('click', openCreate);
+  document.getElementById('openRequestBtn')?.addEventListener('click', openRequests);
+  document.querySelectorAll('[data-close]').forEach(function(btn){
+    btn.addEventListener('click', function(){ ModalManager.close(); });
+  });
+  document.querySelectorAll('.req-filter').forEach(function(btn){
+    btn.addEventListener('click', function(ev){
+      ev.preventDefault();
+      setReqFilter(this.getAttribute('data-status')||'');
+    });
+  });
+
+  /* ======================= WEEK NAV ======================= */
+  (function(){
+    function move(delta){
+      var d0 = new Date(BASE_WEEK || new Date());
+      var d1 = new Date(d0.getFullYear(), d0.getMonth(), d0.getDate()+delta);
+      var y=d1.getFullYear(), m=String(d1.getMonth()+1).padStart(2,'0'), d=String(d1.getDate()).padStart(2,'0');
+      BASE_WEEK = y+'-'+m+'-'+d;
+      reloadMainGrid(); reloadModalGrid();
+    }
+    document.getElementById('pagePrevWeek')?.addEventListener('click', function(e){ e.preventDefault(); move(-7); });
+    document.getElementById('pageNextWeek')?.addEventListener('click', function(e){ e.preventDefault(); move(+7); });
+    document.getElementById('modalPrevWeek')?.addEventListener('click', function(){ move(-7); });
+    document.getElementById('modalNextWeek')?.addEventListener('click', function(){ move(+7); });
+  })();
+
+  /* ======================= SYNC LAB SELECTS ======================= */
+  function syncLabSelects(fromId){
+    var mainSel=document.getElementById('lab_id'), modalSel=document.getElementById('labSelect');
+    if(!mainSel||!modalSel) return;
+    var v=(fromId==='main')?mainSel.value:modalSel.value; mainSel.value=v; modalSel.value=v;
+    reloadMainGrid(); reloadModalGrid(); fetchActiveSessions(); updatePendingBadge();
+  }
+  document.getElementById('lab_id')?.addEventListener('change', function(){ syncLabSelects('main'); });
+  document.getElementById('labSelect')?.addEventListener('change', function(){ syncLabSelects('modal'); });
+
+  /* ======================= INIT ======================= */
+  (function(){
+    var mainSel=document.getElementById('lab_id'), modalSel=document.getElementById('labSelect');
+    if(mainSel && CFG.selected_lab) mainSel.value=String(CFG.selected_lab);
+    if(modalSel && CFG.selected_lab) modalSel.value=String(CFG.selected_lab);
+    reloadMainGrid(); reloadModalGrid(); updatePendingBadge();
+    setInterval(fetchActiveSessions, 20000);
+  })();
+})();
+</script>
+
+</body>
+</html>

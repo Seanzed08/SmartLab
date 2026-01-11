@@ -1,0 +1,470 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Manage Laboratories | NEUST Admin</title>
+  <link rel="stylesheet" href="{% static 'css/admin/admin-style.css' %}">
+  <link rel="stylesheet" href="{% static 'css/admin/manage_laboratories.css' %}">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;600;700;800&display=swap" rel="stylesheet" />
+</head>
+<body class="dashboard-page">
+  <div class="dashboard-container">
+    {% include 'includes/sidebar.html' %}
+    <div class="main-panel">
+      {% include 'includes/header.html' %}
+
+      <section class="content-area">
+        <h2>Manage Laboratories</h2>
+
+        <div class="top-action-bar">
+          <div class="action-left">
+            {% if not show_archived %}
+              <button class="btn btn-add btn-sm" data-open-modal="addLabModal">+ Add Laboratory</button>
+            {% endif %}
+            <div class="archive-toggle">
+              {% if show_archived %}
+                <a href="?archived=0{% if q %}&q={{ q|urlencode }}{% endif %}" class="btn btn-primary btn-sm">Active Labs</a>
+              {% else %}
+                <a href="?archived=1{% if q %}&q={{ q|urlencode }}{% endif %}" class="btn btn-secondary btn-sm">Archived</a>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="search-wrap">
+            <form method="get" aria-label="Search laboratories">
+              <input type="hidden" name="archived" value="{% if show_archived %}1{% else %}0{% endif %}">
+              <input name="q" class="search-input" type="text" placeholder="Search by lab #, location, in-charge, RFID…" value="{{ q|default_if_none:'' }}" autocomplete="off">
+              <button type="submit" class="btn btn-primary btn-sm">Search</button>
+            </form>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table role="table">
+            <thead>
+              <tr>
+                <th>Lab Number</th>
+                <th>Location</th>
+                <th>Capacity</th>
+                <th>In-Charge</th>
+                <th>RFID Reader ID</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for lab in laboratories %}
+                <tr id="row-lab-{{ lab.id }}" class="{% if show_archived %}row-archived{% endif %}">
+                  <td title="Lab {{ lab.lab_num }}">Lab {{ lab.lab_num }}</td>
+                  <td class="ellipsis" title="{{ lab.location }}">{{ lab.location }}</td>
+                  <td>{{ lab.capacity }}</td>
+                  <td>{{ lab.in_charge|default:"Unassigned" }}</td>
+                  <td>{{ lab.rfid_reader_id|default:"N/A" }}</td>
+                  <td class="actions">
+                    {% if show_archived %}
+                      <form method="post"
+                            action="{% url 'restore_laboratory' lab.id %}"
+                            class="inline-form needs-confirm"
+                            data-confirm="Restore Lab {{ lab.lab_num }}?"
+                            data-ok="Restore">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-add btn-sm">Restore</button>
+                      </form>
+
+                      <form method="post"
+                            action="{% url 'hard_delete_laboratory' lab.id %}"
+                            class="inline-form needs-confirm"
+                            data-confirm="Permanently delete Lab {{ lab.lab_num }}? This cannot be undone."
+                            data-ok="Delete">
+                        {% csrf_token %}
+                        {% if lab.can_hard_delete %}
+                          <button type="submit" class="btn btn-delete btn-sm">Delete</button>
+                        {% else %}
+                          <button type="button"
+                                  class="btn btn-delete btn-sm is-blocked"
+                                  disabled
+                                  title="{{ lab.delete_reason|default:'Cannot delete while still referenced (e.g., schedules).' }}">
+                            Delete
+                          </button>
+                        {% endif %}
+                      </form>
+                    {% else %}
+                      <!-- EDIT via modal (AJAX) -->
+                      <button type="button"
+                              class="btn btn-edit btn-sm"
+                              data-lid="{{ lab.id }}"
+                              onclick="openEditLabModal(this)">
+                        Edit
+                      </button>
+
+                      <form method="post"
+                            action="{% url 'archive_laboratory' lab.id %}"
+                            class="inline-form needs-confirm"
+                            data-confirm="Archive Lab {{ lab.lab_num }}? This will cancel upcoming schedules and clear RFID."
+                            data-ok="Archive">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-secondary btn-sm">Archive</button>
+                      </form>
+
+                      <form method="post"
+                            action="{% url 'hard_delete_laboratory' lab.id %}"
+                            class="inline-form needs-confirm"
+                            data-confirm="Permanently delete Lab {{ lab.lab_num }}? This cannot be undone."
+                            data-ok="Delete">
+                        {% csrf_token %}
+                        {% if lab.can_hard_delete %}
+                          <button type="submit" class="btn btn-delete btn-sm">Delete</button>
+                        {% else %}
+                          <button type="button"
+                                  class="btn btn-delete btn-sm is-blocked"
+                                  disabled
+                                  title="{{ lab.delete_reason|default:'Cannot delete while still referenced (e.g., schedules).' }}">
+                            Delete
+                          </button>
+                        {% endif %}
+                      </form>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="6" style="text-align:center;">
+                    {% if q %}No labs match “{{ q }}”.{% else %}No laboratories available.{% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Add Lab Modal (COMPACT) -->
+  <div id="addLabModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="addLabTitle">
+    <div class="modal-content">
+      <span class="modal-close" aria-label="Close">&times;</span>
+      <h3 id="addLabTitle">Add Laboratory</h3>
+
+      <form method="POST" action="{% url 'add_laboratory' %}" class="compact-form">
+        {% csrf_token %}
+        <div class="form-grid-2">
+          <div class="field">
+            <label>Lab Number <span class="req">*</span></label>
+            <input type="number" name="lab_num" required>
+          </div>
+
+          <div class="field">
+            <label>Capacity <span class="req">*</span></label>
+            <input type="number" name="capacity" min="1" required>
+          </div>
+
+          <div class="field full-row">
+            <label>Location <span class="req">*</span></label>
+            <input type="text" name="location" required>
+          </div>
+
+          <div class="field full-row">
+            <label>Faculty In-Charge (optional)</label>
+            <select name="faculty_id">
+              <option value="">-- None --</option>
+              {% for f in faculty_list %}
+                <option value="{{ f.0 }}">{{ f.1 }} {{ f.2 }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="field full-row">
+            <label>RFID Reader ID (optional)</label>
+            <input type="text" name="rfid_reader_id" placeholder="e.g. LAB1-READER01">
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('addLabModal')">Cancel</button>
+          <button type="submit" class="btn btn-add btn-sm">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Lab Modal (COMPACT) -->
+  <div id="editLabModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="editLabTitle">
+    <div class="modal-content">
+      <span class="modal-close" aria-label="Close">&times;</span>
+      <h3 id="editLabTitle">Edit Laboratory</h3>
+
+      <form id="editLabForm" method="POST" class="compact-form">
+        {% csrf_token %}
+        <div class="form-grid-2">
+          <div class="field">
+            <label>Lab Number <span class="req">*</span></label>
+            <input type="number" name="lab_num" required>
+          </div>
+
+          <div class="field">
+            <label>Capacity <span class="req">*</span></label>
+            <input type="number" name="capacity" min="1" required>
+          </div>
+
+          <div class="field full-row">
+            <label>Location <span class="req">*</span></label>
+            <input type="text" name="location" required>
+          </div>
+
+          <div class="field full-row">
+            <label>Faculty In-Charge (optional)</label>
+            <select name="faculty_id">
+              <option value="">-- None --</option>
+              {% for f in faculty_list %}
+                <option value="{{ f.0 }}">{{ f.1 }} {{ f.2 }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="field">
+            <label>RFID Reader ID (optional)</label>
+            <input type="text" name="rfid_reader_id" placeholder="e.g. LAB1-READER01">
+          </div>
+
+          <div class="field">
+            <label>Status</label>
+            <select name="status" required>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
+
+          <div class="field full-row">
+            <div class="muted" style="margin-top:4px;">
+              Setting <strong>Inactive</strong> will archive this lab, cancel upcoming schedules, and clear its RFID.
+            </div>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('editLabModal')">Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Confirm Modal -->
+  <div id="confirmBackdrop" class="cmodal-backdrop" hidden></div>
+  <div id="confirmModal" class="cmodal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle" hidden>
+    <div class="cmodal-card" role="document">
+      <button type="button" class="cmodal-x" id="confirmX" aria-label="Close">×</button>
+      <h3 id="confirmTitle">Please confirm</h3>
+      <p id="confirmMessage">Are you sure?</p>
+      <div class="cmodal-actions">
+        <button type="button" class="btn btn-secondary btn-sm" id="confirmCancel">Cancel</button>
+        <button type="button" class="btn btn-delete btn-sm" id="confirmOk">Yes, proceed</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Django messages container (for toast rendering) -->
+  {% if messages %}
+    <div id="django-messages" style="display:none">
+      {% for m in messages %}
+        <div class="djmsg" data-tags="{{ m.tags }}" data-text="{{ m|escapejs }}"></div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <!-- Toast container -->
+  <div class="toast-wrap" aria-live="polite" aria-atomic="true">
+    <div id="appToast" class="toast" role="status" hidden>
+      <div class="t-icon">✓</div>
+      <div class="t-msg">Saved successfully.</div>
+    </div>
+  </div>
+
+  <script>
+    /* ===== Basic modal helpers ===== */
+    function openModal(id){
+      var m = document.getElementById(id);
+      if (!m) return;
+      m.classList.add('show');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeModal(id){
+      var m = document.getElementById(id);
+      if (!m) return;
+      m.classList.remove('show');
+      document.body.style.overflow = '';
+    }
+
+    // open via [data-open-modal]
+    document.addEventListener('click', function(e){
+      var btn = e.target.closest('[data-open-modal]');
+      if (!btn) return;
+      e.preventDefault();
+      openModal(btn.getAttribute('data-open-modal'));
+    });
+
+    // × close
+    document.addEventListener('click', function(e){
+      var x = e.target.closest('.modal .modal-close');
+      if (!x) return;
+      var m = x.closest('.modal');
+      if (m) { m.classList.remove('show'); document.body.style.overflow = ''; }
+    });
+
+    // click backdrop & ESC
+    window.addEventListener('click', function(e){
+      document.querySelectorAll('.modal.show').forEach(function(m){
+        if (e.target === m) { m.classList.remove('show'); document.body.style.overflow=''; }
+      });
+    });
+    window.addEventListener('keydown', function(e){
+      if (e.key !== 'Escape') return;
+      document.querySelectorAll('.modal.show').forEach(function(m){ m.classList.remove('show'); });
+      document.body.style.overflow='';
+    });
+
+    /* ===== Confirm dialog ===== */
+    function confirmDialog(message, opts){
+      opts = opts || {};
+      var title = opts.title || 'Please confirm';
+      var okText = opts.okText || 'OK';
+      var cancelText = opts.cancelText || 'Cancel';
+      var backdrop = document.getElementById('confirmBackdrop');
+      var modal    = document.getElementById('confirmModal');
+      var msgEl    = document.getElementById('confirmMessage');
+      var titleEl  = document.getElementById('confirmTitle');
+      var okBtn    = document.getElementById('confirmOk');
+      var cancelBtn= document.getElementById('confirmCancel');
+      var xBtn     = document.getElementById('confirmX');
+
+      return new Promise(function(resolve){
+        titleEl.textContent = title;
+        msgEl.textContent = message || 'Are you sure?';
+        okBtn.textContent = okText; cancelBtn.textContent = cancelText;
+        backdrop.hidden = false; modal.hidden = false; document.body.style.overflow='hidden';
+
+        function cleanup(result){
+          backdrop.hidden = true; modal.hidden = true; document.body.style.overflow='';
+          okBtn.removeEventListener('click', onOk);
+          cancelBtn.removeEventListener('click', onCancel);
+          xBtn.removeEventListener('click', onCancel);
+          backdrop.removeEventListener('click', onCancel);
+          document.removeEventListener('keydown', onKeydown);
+          resolve(result);
+        }
+        function onOk(){ cleanup(true); }
+        function onCancel(){ cleanup(false); }
+        function onKeydown(e){ if(e.key==='Escape'){ e.preventDefault(); onCancel(); } }
+
+        okBtn.addEventListener('click', onOk);
+        cancelBtn.addEventListener('click', onCancel);
+        xBtn.addEventListener('click', onCancel);
+        backdrop.addEventListener('click', onCancel);
+        document.addEventListener('keydown', onKeydown);
+      });
+    }
+
+    // apply confirm to forms
+    document.addEventListener('submit', function(e){
+      var form = e.target.closest('form.needs-confirm');
+      if (!form) return;
+      e.preventDefault();
+      var msg = form.getAttribute('data-confirm') || 'Are you sure?';
+      var okTxt = form.getAttribute('data-ok') || 'OK';
+      confirmDialog(msg, { okText: okTxt, cancelText: 'Cancel' }).then(function(ok){
+        if (ok) form.submit();
+      });
+    });
+
+    /* ===== Toast helper + render Django messages ===== */
+    function showToast(message, opts){
+      opts = opts || {};
+      var type = (opts.type === 'error') ? 'error' : 'success';
+      var timeout = typeof opts.timeout === 'number' ? opts.timeout : 2200;
+      var then = typeof opts.then === 'function' ? opts.then : null;
+
+      var t = document.getElementById('appToast');
+      if (!t) return;
+      t.querySelector('.t-msg').textContent = message || '';
+      t.classList.toggle('error', type === 'error');
+      t.querySelector('.t-icon').textContent = (type === 'error') ? '!' : '✓';
+      t.hidden = false;
+      requestAnimationFrame(function(){ t.classList.add('show'); });
+      clearTimeout(t._timer);
+      t._timer = setTimeout(function(){
+        t.classList.remove('show');
+        setTimeout(function(){
+          t.hidden = true;
+          if (then) { try{ then(); }catch(e){} }
+        }, 180);
+      }, timeout);
+    }
+
+    (function(){
+      var box = document.getElementById('django-messages');
+      if (!box) return;
+      var items = box.querySelectorAll('.djmsg');
+      for (var i = 0; i < items.length; i++) {
+        var text = items[i].getAttribute('data-text') || '';
+        var tags = items[i].getAttribute('data-tags') || '';
+        var isError = (tags.indexOf('error') > -1) || (tags.indexOf('warning') > -1);
+        showToast(text, { type: isError ? 'error' : 'success', timeout: 2600 });
+      }
+    })();
+
+    /* ===== Edit Lab Modal (AJAX) ===== */
+    var editLabForm  = document.getElementById('editLabForm');
+
+    function openEditLabModal(btn){
+      var lid = btn.getAttribute('data-lid');
+      // Save endpoint
+      editLabForm.action = "{% url 'save_laboratory_json' 0 %}".replace('/0/', '/' + lid + '/');
+
+      // Load current values
+      fetch("{% url 'get_laboratory_json' 0 %}".replace('/0/', '/' + lid + '/'), {
+        headers: { 'Accept': 'application/json' }
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.error){ alert(data.error); return; }
+        editLabForm.lab_num.value    = data.lab_num || '';
+        editLabForm.location.value   = data.location || '';
+        editLabForm.capacity.value   = data.capacity || 1;
+        editLabForm.rfid_reader_id.value = data.rfid_reader_id || '';
+
+        // faculty
+        var sel = editLabForm.elements['faculty_id'];
+        if (sel){
+          Array.from(sel.options).forEach(o => (o.selected = (o.value === (data.faculty_id ? String(data.faculty_id) : ''))));
+        }
+
+        // status
+        var st = editLabForm.elements['status'];
+        if (st){
+          Array.from(st.options).forEach(o => (o.selected = (o.value === (data.status || 'active'))));
+        }
+
+        openModal('editLabModal');
+      })
+      .catch(() => alert('Failed to load laboratory details.'));
+    }
+
+    // Submit save via AJAX
+    editLabForm.addEventListener('submit', function(e){
+      e.preventDefault();
+      var fd = new FormData(editLabForm);
+      fetch(editLabForm.action, { method:'POST', body: fd })
+        .then(r => r.json())
+        .then(res => {
+          if (!res.ok){
+            showToast(res.error || 'Save failed.', { type:'error', timeout: 2600 });
+            return;
+          }
+          showToast(res.message || 'Saved successfully.', { timeout: 1400, then: () => location.reload() });
+        })
+        .catch(() => showToast('Save failed.', { type:'error', timeout: 2600 }));
+    });
+  </script>
+</body>
+</html>

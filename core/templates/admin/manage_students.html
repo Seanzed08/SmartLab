@@ -1,0 +1,790 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Manage Student | NEUST Admin</title>
+  <link rel="stylesheet" href="{% static 'css/admin/admin-style.css' %}" />
+  <link rel="stylesheet" href="{% static 'css/admin/manage_student.css' %}" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    .form-error{color:#b91c1c;background:#fee2e2;border:1px solid #fecaca;padding:8px 10px;border-radius:8px;margin-bottom:10px;display:none}
+    .toast-wrap{position:fixed;right:16px;bottom:16px;z-index:9999}
+    .toast{min-width:220px;max-width:360px;background:#10b981;color:#fff;border-radius:10px;padding:10px 12px;
+           box-shadow:0 8px 30px rgba(0,0,0,.15);transform:translateY(12px);opacity:0;transition:.18s ease;display:flex;gap:8px}
+    .toast.show{transform:translateY(0);opacity:1}
+    .toast.error{background:#ef4444}
+    .toast .t-icon{font-weight:700}
+    .toast .t-msg{flex:1}
+    .nowrap{white-space:nowrap}
+    .ellipsis{max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+    .cmodal-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.55);backdrop-filter:blur(2px);z-index:3000}
+    .cmodal{position:fixed;inset:0;display:grid;place-items:center;z-index:3001}
+    .cmodal[hidden], .cmodal-backdrop[hidden]{display:none !important}
+    .cmodal-card{width:min(440px,92vw);background:#fff;border-radius:16px;box-shadow:0 24px 60px rgba(2,8,23,.35);padding:22px 20px 18px;position:relative}
+    .cmodal-card h3{margin:0 0 8px;color:#0f2454;font-size:20px;font-weight:800}
+    .cmodal-card p{margin:0 0 16px;color:#1f2937;line-height:1.4}
+    .cmodal-actions{display:flex;gap:10px;justify-content:flex-end;align-items:center}
+    .cmodal-x{position:absolute;right:10px;top:8px;border:none;background:transparent;font-size:20px;line-height:1;cursor:pointer;color:#64748b;border-radius:999px;padding:2px 8px}
+    .cmodal-x:hover{background:#f1f5f9;color:#0f172a}
+
+    /* ✅ Skipped rows summary box */
+    .upload-skipped-box{
+      margin-top:10px;
+      background:#fff7ed;
+      border:1px solid #fed7aa;
+      padding:10px 14px;
+      border-radius:10px;
+      font-size:13px;
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+      position:relative;
+      padding-right:34px;
+    }
+    .upload-skipped-box strong{
+      color:#9a3412;
+      font-size:14px;
+    }
+    .upload-skipped-box p{
+      margin:0;
+      color:#92400e;
+    }
+    .upload-skipped-close{
+      position:absolute;
+      top:6px;
+      right:8px;
+      border:none;
+      background:transparent;
+      font-size:18px;
+      line-height:1;
+      cursor:pointer;
+      color:#c05621;
+      padding:2px 6px;
+      border-radius:999px;
+    }
+    .upload-skipped-close:hover{
+      background:#ffedd5;
+      color:#7c2d12;
+    }
+
+    /* ✅ Skipped rows modal design */
+    .skipped-modal{
+      position:fixed;
+      inset:0;
+      display:none;
+      place-items:center;
+      z-index:3300;
+      background:rgba(15,23,42,.55);
+      backdrop-filter:blur(2px);
+    }
+    .skipped-modal.show{
+      display:grid;
+    }
+    .skipped-modal-card{
+      width:min(720px,96vw);
+      max-height:80vh;
+      background:#fff;
+      border-radius:16px;
+      box-shadow:0 28px 80px rgba(15,23,42,.5);
+      padding:18px 18px 16px;
+      display:flex;
+      flex-direction:column;
+      overflow:hidden;
+      animation:skippedIn .18s ease-out;
+    }
+    .skipped-modal-header{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:6px;
+    }
+    .skipped-modal-title{
+      font-size:18px;
+      font-weight:800;
+      color:#0f2454;
+    }
+    .skipped-modal-close{
+      border:none;
+      background:transparent;
+      font-size:22px;
+      line-height:1;
+      cursor:pointer;
+      color:#64748b;
+      border-radius:999px;
+      padding:2px 8px;
+    }
+    .skipped-modal-close:hover{background:#f1f5f9;color:#0f172a;}
+    .skipped-modal-body{
+      margin-top:6px;
+      border-radius:12px;
+      border:1px solid #e5e7eb;
+      overflow:auto;
+      max-height:60vh;
+    }
+    .skipped-table{
+      width:100%;
+      border-collapse:collapse;
+      font-size:13px;
+    }
+    .skipped-table th,
+    .skipped-table td{
+      padding:8px 10px;
+      border-bottom:1px solid #e5e7eb;
+      text-align:left;
+      vertical-align:top;
+    }
+    .skipped-table thead{
+      background:#fef3c7;
+    }
+    .skipped-table th{
+      font-weight:700;
+      color:#92400e;
+      text-transform:uppercase;
+      font-size:11px;
+    }
+    .skipped-table tbody tr:nth-child(even){
+      background:#fffaf0;
+    }
+    .skipped-reason{
+      color:#b91c1c;
+      font-weight:600;
+    }
+    @keyframes skippedIn{
+      from{opacity:0;transform:translateY(8px) scale(.97);}
+      to{opacity:1;transform:translateY(0) scale(1);}
+    }
+  </style>
+</head>
+<body class="dashboard-page">
+  <div class="dashboard-container">
+    {% include 'includes/sidebar.html' %}
+    <div class="main-panel">
+      {% include 'includes/header.html' %}
+
+      <section class="content-area">
+        <h2>Manage Student</h2>
+
+        <!-- Upload Excel -->
+        <form action="{% url 'upload_excel' %}" method="POST" enctype="multipart/form-data" class="upload-form upload-compact">
+          {% csrf_token %}
+          <span class="upload-label nowrap">Upload .xlsx</span>
+          <div class="file-input-wrap">
+            <input type="file" name="excel_files" id="excel_files" multiple accept=".xlsx" required />
+          </div>
+          <button type="submit" class="btn btn-upload btn-sm">📄 Upload Excel</button>
+
+          <!-- Downloadable template -->
+          <a href="{% static 'excel_templates/student_upload_template.xlsx' %}"
+             class="btn btn-clear btn-sm"
+             style="margin-left:8px;">
+            Download template
+          </a>
+        </form>
+
+        <!-- ✅ Skipped rows summary -->
+        {% if upload_skipped %}
+          <div class="upload-skipped-box" id="uploadSkippedBox">
+            <button type="button"
+                    class="upload-skipped-close"
+                    aria-label="Dismiss skipped rows notice"
+                    onclick="document.getElementById('uploadSkippedBox').style.display='none';">
+              ×
+            </button>
+
+            <strong>{{ upload_skipped|length }} row(s) were skipped in the last upload.</strong>
+            <p>You can review the full details (name, email, student number, and reason) below.</p>
+            <button type="button"
+                    class="btn btn-clear btn-sm"
+                    style="align-self:flex-start;margin-top:4px;"
+                    onclick="openModal('skippedRowsModal')">
+              View skipped rows
+            </button>
+          </div>
+        {% endif %}
+
+        <!-- Top action bar -->
+        <div class="top-action-bar">
+          <div class="action-left">
+            {% if not show_archived %}
+              <button class="btn btn-add btn-sm" data-open-modal="addStudentModal" title="Add a new student">+ Add Student</button>
+            {% endif %}
+
+            <div class="archive-toggle">
+              {% if show_archived %}
+                <a href="?archived=0{% if q %}&q={{ q|urlencode }}{% endif %}" class="btn btn-primary btn-sm">Active Students</a>
+              {% else %}
+                <a href="?archived=1{% if q %}&q={{ q|urlencode }}{% endif %}" class="btn btn-secondary btn-sm">Archived</a>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="search-wrap">
+            <form method="get" aria-label="Search students">
+              <input type="hidden" name="archived" value="{% if show_archived %}1{% else %}0{% endif %}">
+              <input type="text" name="q" class="search-input" placeholder="Search name, student no., email, RFID…" value="{{ q|default_if_none:'' }}" autocomplete="off" />
+              <button type="submit" class="btn btn-primary btn-sm">Search</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Students Table -->
+        <div class="table-wrap">
+          <table role="table">
+            <thead>
+              <tr>
+                <th scope="col">Name</th>
+                <th scope="col">Student #</th>
+                <th scope="col">Email</th>
+                <th scope="col">RFID</th>
+                <th scope="col">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for s in students %}
+                <tr id="row-student-{{ s.id }}" class="{% if show_archived %}row-archived{% endif %}">
+                  <td class="ellipsis" title="{{ s.name }}">{{ s.name }}</td>
+                  <td class="ellipsis" title="{{ s.student_number }}">{{ s.student_number }}</td>
+                  <td class="ellipsis" title="{{ s.email }}">{{ s.email }}</td>
+                  <td class="nowrap">{{ s.rfid }}</td>
+                  <td class="actions nowrap">
+                    {% if show_archived %}
+                      <form method="post"
+                            action="{% url 'restore_student' s.id %}"
+                            class="inline-form needs-confirm"
+                            data-confirm="Restore {{ s.name|escapejs }}?"
+                            data-ok="Restore"
+                            style="display:inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-add btn-sm">Restore</button>
+                      </form>
+
+                      <form method="post"
+                            action="{% url 'hard_delete_student' s.id %}"
+                            class="inline-form needs-confirm"
+                            data-confirm="Delete {{ s.name|escapejs }} permanently? This cannot be undone."
+                            data-ok="Delete"
+                            style="display:inline">
+                        {% csrf_token %}
+                        {% if s.can_hard_delete %}
+                          <button type="submit" class="btn btn-delete btn-sm">Delete</button>
+                        {% else %}
+                          <button type="button"
+                                  class="btn btn-delete btn-sm is-blocked"
+                                  disabled
+                                  title="{{ s.delete_reason|default:'Cannot delete while still referenced (attendance, etc.)' }}">
+                            Delete
+                          </button>
+                        {% endif %}
+                      </form>
+                    {% else %}
+                      <button type="button"
+                              class="btn btn-edit btn-sm"
+                              data-sid="{{ s.id }}"
+                              onclick="openEditModal(this)">
+                        Edit
+                      </button>
+
+                      <form method="post"
+                            action="{% url 'hard_delete_student' s.id %}"
+                            class="inline-form needs-confirm"
+                            data-confirm="Delete {{ s.name|escapejs }} permanently? This cannot be undone."
+                            data-ok="Delete"
+                            style="display:inline">
+                        {% csrf_token %}
+                        {% if s.can_hard_delete %}
+                          <button type="submit" class="btn btn-delete btn-sm">Delete</button>
+                        {% else %}
+                          <button type="button"
+                                  class="btn btn-delete btn-sm is-blocked"
+                                  disabled
+                                  title="{{ s.delete_reason|default:'Cannot delete while still referenced (attendance, etc.)' }}">
+                            Delete
+                          </button>
+                        {% endif %}
+                      </form>
+
+                      <button
+                        type="button"
+                        class="btn btn-assign btn-sm"
+                        data-student-id="{{ s.id }}"
+                        data-student-name="{{ s.name|escapejs }}"
+                        onclick="openRFIDEl(this)">
+                        Assign RFID
+                      </button>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="5" style="text-align:center;">
+                    {% if q %}No results for “{{ q }}”.{% else %}No students found.{% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ADD STUDENT MODAL (compact, blue Save) -->
+  <div id="addStudentModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="addStudentTitle">
+    <div class="modal-content">
+      <button type="button"
+              class="modal-close"
+              onclick="closeModal('addStudentModal')"
+              aria-label="Close">
+        &times;
+      </button>
+
+      <h3 id="addStudentTitle" class="modal-title">Add Student</h3>
+
+      <form action="{% url 'add_student' %}" method="POST" id="addStudentForm">
+        {% csrf_token %}
+        <div class="emodal-grid">
+          <div class="form-group">
+            <label for="stud_num">Student Number *</label>
+            <input id="stud_num" type="text" name="stud_num" required autocomplete="off">
+          </div>
+          <div class="form-group">
+            <label for="email">Email *</label>
+            <input id="email" type="email" name="email" required autocomplete="off">
+          </div>
+          <div class="form-group">
+            <label for="first_name">First Name *</label>
+            <input id="first_name" type="text" name="first_name" required autocomplete="off">
+          </div>
+          <div class="form-group">
+            <label for="middle_name">Middle Name</label>
+            <input id="middle_name" type="text" name="middle_name" autocomplete="off">
+          </div>
+          <div class="form-group">
+            <label for="last_name">Last Name *</label>
+            <input id="last_name" type="text" name="last_name" required autocomplete="off">
+          </div>
+        </div>
+
+        <div class="emodal-actions" style="margin-top:16px;">
+          <button type="button"
+                  class="btn btn-secondary btn-sm"
+                  onclick="closeModal('addStudentModal')">
+            Cancel
+          </button>
+          <button type="submit"
+                  class="btn btn-primary btn-sm">
+            Save Student
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- EDIT STUDENT MODAL (compact, blue Save) -->
+  <div id="editModal" class="emodal" role="dialog" aria-modal="true" aria-labelledby="editTitle">
+    <div class="emodal-card" role="document">
+      <div class="emodal-header">
+        <div id="editTitle" class="emodal-title">Edit Student</div>
+        <button type="button" class="emodal-x" onclick="closeEditModal()">×</button>
+      </div>
+      <form id="editForm" method="POST">
+        {% csrf_token %}
+        <div class="emodal-grid">
+          <div class="form-group">
+            <label>Student Number *</label>
+            <input type="text" name="stud_num" required>
+          </div>
+          <div class="form-group">
+            <label>Email *</label>
+            <input type="email" name="email" required>
+          </div>
+          <div class="form-group">
+            <label>First Name *</label>
+            <input type="text" name="first_name" required>
+          </div>
+          <div class="form-group">
+            <label>Middle Name</label>
+            <input type="text" name="middle_name">
+          </div>
+          <div class="form-group">
+            <label>Last Name *</label>
+            <input type="text" name="last_name" required>
+          </div>
+          <div class="form-group">
+            <label>Status</label>
+            <select name="status" required>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
+        </div>
+        <div class="emodal-actions">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="closeEditModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <div id="editBackdrop" class="emodal-backdrop"></div>
+
+  <!-- RFID Assignment Modal -->
+  <div id="rfidModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="rfidTitle">
+    <div class="modal-content">
+      <span class="modal-close" onclick="closeModal('rfidModal')" aria-label="Close">&times;</span>
+      <h3 id="rfidTitle">Assign RFID</h3>
+      <p id="studentInfo" class="muted"></p>
+      <form id="rfidForm">
+        {% csrf_token %}
+        <input type="hidden" name="student_id" id="studentIdInput">
+        <div class="form-group">
+          <label for="rfidInput">Scan RFID Card</label>
+          <input type="text" name="rfid" id="rfidInput" autocomplete="off" required>
+        </div>
+        <p id="rfidStatus" class="muted"></p>
+        <button type="submit" class="btn btn-assign btn-sm">Assign</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('rfidModal')">Cancel</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ✅ Skipped rows MODAL -->
+  <div id="skippedRowsModal" class="skipped-modal" role="dialog" aria-modal="true" aria-labelledby="skippedRowsTitle">
+    <div class="skipped-modal-card">
+      <div class="skipped-modal-header">
+        <div id="skippedRowsTitle" class="skipped-modal-title">Skipped rows from last upload</div>
+        <button type="button" class="skipped-modal-close" onclick="closeModal('skippedRowsModal')">×</button>
+      </div>
+      <p style="margin:0 0 8px;font-size:13px;color:#4b5563;">
+        These rows were not imported. Please correct the issues in your Excel file and upload again.
+      </p>
+      <div class="skipped-modal-body">
+        <table class="skipped-table">
+          <thead>
+            <tr>
+              <th style="width:60px;">Row</th>
+              <th style="width:180px;">Name</th>
+              <th>Email</th>
+              <th style="width:130px;">Student #</th>
+              <th>Reason</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if upload_skipped %}
+              {% for r in upload_skipped %}
+              <tr>
+                <td><strong>{{ r.row }}</strong></td>
+                <td>
+                  {{ r.first_name }}
+                  {% if r.middle_name %} {{ r.middle_name }}{% endif %}
+                  {{ r.last_name }}
+                </td>
+                <td>{{ r.email }}</td>
+                <td>{{ r.stud_num }}</td>
+                <td class="skipped-reason">{{ r.reason }}</td>
+              </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="5" style="text-align:center;padding:12px;">
+                  No skipped rows found.
+                </td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-top:10px;">
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('skippedRowsModal')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Django messages (hidden, used to trigger toasts) -->
+  {% if messages %}
+  <div id="django-messages" style="display:none">
+    {% for m in messages %}
+      <div class="djmsg" data-tags="{{ m.tags }}" data-text="{{ m|escapejs }}"></div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Confirm Modal -->
+  <div id="confirmBackdrop" class="cmodal-backdrop" hidden></div>
+  <div id="confirmModal" class="cmodal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle" hidden>
+    <div class="cmodal-card" role="document">
+      <button type="button" class="cmodal-x" id="confirmX" aria-label="Close">×</button>
+      <h3 id="confirmTitle">Please confirm</h3>
+      <p id="confirmMessage">Are you sure?</p>
+      <div class="cmodal-actions">
+        <button type="button" class="btn btn-secondary btn-sm" id="confirmCancel">Cancel</button>
+        <button type="button" class="btn btn-delete btn-sm" id="confirmOk">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast-wrap" aria-live="polite" aria-atomic="true">
+    <div id="appToast" class="toast" role="status" hidden>
+      <div class="t-icon">✓</div>
+      <div class="t-msg">Saved successfully.</div>
+    </div>
+  </div>
+
+  <script>
+  /* BASIC OPEN/CLOSE HELPERS */
+  function openModal(id){
+    var m = document.getElementById(id);
+    if(!m) return;
+    m.classList.add('show');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeModal(id){
+    var m = document.getElementById(id);
+    if(!m) return;
+    m.classList.remove('show');
+    document.body.style.overflow = '';
+  }
+
+  document.addEventListener('click', function(e){
+    var btn = e.target.closest('[data-open-modal]');
+    if (!btn) return;
+    e.preventDefault();
+    var id = btn.getAttribute('data-open-modal');
+    if (id) openModal(id);
+  });
+
+  document.addEventListener('click', function(e){
+    var btn = e.target.closest('.modal-close');
+    if (!btn) return;
+    var parent = btn.closest('.modal, .emodal, .skipped-modal');
+    if (parent) parent.classList.remove('show');
+    document.body.style.overflow = '';
+  });
+
+  window.addEventListener('click', function(e){
+    var modals = document.querySelectorAll('.modal.show, .emodal.show, .skipped-modal.show');
+    for (var i = 0; i < modals.length; i++){
+      if (e.target === modals[i]) {
+        modals[i].classList.remove('show');
+        document.body.style.overflow = '';
+      }
+    }
+  });
+
+  window.addEventListener('keydown', function(e){
+    if (e.key !== 'Escape') return;
+    var modals = document.querySelectorAll('.modal.show, .emodal.show, .skipped-modal.show');
+    for (var i = 0; i < modals.length; i++){
+      modals[i].classList.remove('show');
+    }
+    document.body.style.overflow = '';
+  });
+
+  /* EDIT MODAL (LOAD + OPEN) */
+  var editModal    = document.getElementById('editModal');
+  var editBackdrop = document.getElementById('editBackdrop');
+  var editForm     = document.getElementById('editForm');
+
+  function openEditModal(btn){
+    var sid = btn.getAttribute('data-sid');
+    editForm.action = "{% url 'save_student' 0 %}".replace('/0/', '/' + sid + '/');
+
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', "{% url 'get_student_json' 0 %}".replace('/0/', '/' + sid + '/'), true);
+    xhr.setRequestHeader('Accept','application/json');
+    xhr.onreadystatechange = function(){
+      if (xhr.readyState !== 4) return;
+      try {
+        var data = JSON.parse(xhr.responseText);
+        if (data.error) { alert(data.error); return; }
+
+        editForm.first_name.value = data.first_name || '';
+        editForm.middle_name.value= data.middle_name || '';
+        editForm.last_name.value  = data.last_name  || '';
+        editForm.email.value      = data.email      || '';
+        editForm.stud_num.value   = data.stud_num   || '';
+
+        var statusSel = editForm.elements['status'];
+        if (statusSel) {
+          var desired = (data.status || 'active');
+          for (var i=0; i<statusSel.options.length; i++){
+            statusSel.options[i].selected = (statusSel.options[i].value === desired);
+          }
+        }
+
+        editModal.classList.add('show');
+        if (editBackdrop) editBackdrop.style.display='block';
+        document.body.style.overflow='hidden';
+      } catch(e){
+        alert('Failed to load student details.');
+      }
+    };
+    xhr.send();
+  }
+
+  function closeEditModal(){
+    if (editModal) editModal.classList.remove('show');
+    if (editBackdrop) editBackdrop.style.display='none';
+    document.body.style.overflow='';
+  }
+  if (editBackdrop){
+    editBackdrop.addEventListener('click', closeEditModal);
+  }
+
+  /* RFID MODAL (ASSIGN) */
+  function openRFIDEl(el){
+    openModal('rfidModal');
+    document.getElementById('studentInfo').innerText = 'Assigning RFID for: ' + (el.getAttribute('data-student-name') || '');
+    document.getElementById('studentIdInput').value  = el.getAttribute('data-student-id') || '';
+    var input = document.getElementById('rfidInput');
+    document.getElementById('rfidStatus').innerText = '';
+    input.value = '';
+    setTimeout(function(){ input.focus(); }, 50);
+  }
+
+  var rfidForm = document.getElementById('rfidForm');
+  if (rfidForm){
+    rfidForm.addEventListener('submit', function(e){
+      e.preventDefault();
+      var studentId = document.getElementById('studentIdInput').value;
+      var rfid = (document.getElementById('rfidInput').value || '').trim();
+      if (!studentId || !rfid) return;
+
+      var csrfEl = rfidForm.querySelector('[name=csrfmiddlewaretoken]');
+      var csrf = csrfEl ? csrfEl.value : '';
+
+      var xhr = new XMLHttpRequest();
+      xhr.open('POST', "{% url 'assign_rfid' %}", true);
+      xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+      if (csrf) xhr.setRequestHeader('X-CSRFToken', csrf);
+      xhr.onreadystatechange = function(){
+        if (xhr.readyState !== 4) return;
+        try {
+          var data = JSON.parse(xhr.responseText);
+          document.getElementById('rfidStatus').innerText = data.message || '';
+          if (data.status === "success") setTimeout(function(){ location.reload(); }, 800);
+        } catch(e){
+          document.getElementById('rfidStatus').innerText = 'Request failed.';
+        }
+      };
+      xhr.send('student_id=' + encodeURIComponent(studentId) + '&rfid=' + encodeURIComponent(rfid));
+    });
+  }
+
+  /* TOASTS (DJANGO MESSAGES) */
+  function showToast(message, opts){
+    opts = opts || {};
+    var type = opts.type === 'error' ? 'error' : 'success';
+    var timeout = typeof opts.timeout === 'number' ? opts.timeout : 2200;
+    var then = typeof opts.then === 'function' ? opts.then : null;
+
+    var t = document.getElementById('appToast');
+    if (!t) return;
+    var msgEl = t.querySelector('.t-msg');
+    var iconEl = t.querySelector('.t-icon');
+
+    msgEl.textContent = message || '';
+    if (type === 'error') { t.classList.add('error'); iconEl.textContent = '!'; }
+    else { t.classList.remove('error'); iconEl.textContent = '✓'; }
+
+    t.hidden = false;
+    requestAnimationFrame(function(){ t.classList.add('show'); });
+
+    clearTimeout(t._timer);
+    t._timer = setTimeout(function(){
+      t.classList.remove('show');
+      setTimeout(function(){
+        t.hidden = true;
+        if (then) { try{ then(); }catch(e){} }
+      }, 180);
+    }, timeout);
+  }
+
+  (function(){
+    var box = document.getElementById('django-messages');
+    if (!box) return;
+    var items = box.querySelectorAll('.djmsg');
+    for (var i = 0; i < items.length; i++) {
+      var text = items[i].getAttribute('data-text') || '';
+      var tags = items[i].getAttribute('data-tags') || '';
+      var isError = (tags.indexOf('error') > -1) || (tags.indexOf('warning') > -1);
+      showToast(text, { type: isError ? 'error' : 'success', timeout: 2600 });
+    }
+  })();
+
+  /* CONFIRM DIALOG */
+  function confirmDialog(message, opts){
+    opts = opts || {};
+    var title = opts.title || 'Please confirm';
+    var okText = opts.okText || 'OK';
+    var cancelText = opts.cancelText || 'Cancel';
+
+    var backdrop = document.getElementById('confirmBackdrop');
+    var modal    = document.getElementById('confirmModal');
+    var msgEl    = document.getElementById('confirmMessage');
+    var titleEl  = document.getElementById('confirmTitle');
+    var okBtn    = document.getElementById('confirmOk');
+    var cancelBtn= document.getElementById('confirmCancel');
+    var xBtn     = document.getElementById('confirmX');
+
+    return new Promise(function(resolve){
+      titleEl.textContent = title;
+      msgEl.textContent   = message || 'Are you sure?';
+      okBtn.textContent   = okText;
+      cancelBtn.textContent = cancelText;
+
+      backdrop.hidden = false;
+      modal.hidden = false;
+      document.body.style.overflow = 'hidden';
+
+      function cleanup(result){
+        backdrop.hidden = true; modal.hidden = true; document.body.style.overflow = '';
+        okBtn.removeEventListener('click', onOk);
+        cancelBtn.removeEventListener('click', onCancel);
+        xBtn.removeEventListener('click', onCancel);
+        backdrop.removeEventListener('click', onCancel);
+        document.removeEventListener('keydown', onKeydown);
+        resolve(result);
+      }
+      function onOk(){ cleanup(true); }
+      function onCancel(){ cleanup(false); }
+      function onKeydown(e){ if(e.key==='Escape'){ e.preventDefault(); onCancel(); } }
+
+      okBtn.addEventListener('click', onOk);
+      cancelBtn.addEventListener('click', onCancel);
+      xBtn.addEventListener('click', onCancel);
+      backdrop.addEventListener('click', onCancel);
+      document.addEventListener('keydown', onKeydown);
+    });
+  }
+
+  document.addEventListener('submit', function(e){
+    var form = e.target.closest('form.needs-confirm');
+    if (!form) return;
+    e.preventDefault();
+    var msg = form.getAttribute('data-confirm') || 'Are you sure?';
+    var okTxt = form.getAttribute('data-ok') || 'OK';
+    confirmDialog(msg, { okText: okTxt, cancelText: 'Cancel' })
+      .then(function(ok){
+        if (ok) form.submit();
+      });
+  });
+
+  /* Loading state for Excel upload button */
+  (function(){
+    var uploadForm = document.querySelector('.upload-form.upload-compact');
+    if (!uploadForm) return;
+    uploadForm.addEventListener('submit', function(){
+      var btn = uploadForm.querySelector('button[type="submit"]');
+      if (btn){
+        btn.disabled = true;
+        btn.textContent = 'Uploading...';
+      }
+    });
+  })();
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,36 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Attendance Records (Embedded SSRS) | NEUST</title>
+  <link rel="stylesheet" href="{% static 'css/admin/admin-style.css' %}" />
+  <style>
+    .embed-wrap{padding:20px;}
+    .embed-toolbar{display:flex; gap:8px; align-items:center; margin-bottom:10px;}
+    .embed-frame{width:100%; height:86vh; border:0;}
+  </style>
+</head>
+<body class="dashboard-page">
+<div class="dashboard-container">
+  {% include 'includes/sidebar.html' %}
+
+  <div class="main-panel">
+    {% include 'includes/header.html' %}
+
+    <section class="content-area embed-wrap">
+      <div class="embed-toolbar">
+        <a href="{% url 'admin_dashboard' %}?start_date={{ start_date }}&end_date={{ end_date }}&lab_id={{ lab_id }}&teacher_id={{ teacher_id }}" class="mini-btn">← Back</a>
+        <h3 style="margin:0;">Attendance Records (Embedded Report)</h3>
+      </div>
+
+
+      <iframe
+        class="embed-frame"
+        src="/ReportServer?/NEUST/AttendanceRecords&StartDate={{ start_date }}&EndDate={{ end_date }}&LabId={{ lab_id }}&TeacherId={{ teacher_id }}&rs:Embed=true">
+      </iframe>
+    </section>
+  </div>
+</div>
+</body>
+</html>

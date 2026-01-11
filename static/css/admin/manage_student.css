@@ -1,0 +1,528 @@
+/* ===============================
+   MANAGE STUDENT PAGE (Full Style)
+   Mirrors Manage Faculty styling
+   Only table scrolls; main page fixed
+   =============================== */
+
+/* -------- Base -------- */
+body {
+  font-family: 'Roboto', sans-serif;
+  margin: 0;
+  background-color: #f9f9f9;
+  height: 100%;
+  overflow: hidden; /* main page no scroll */
+}
+html {
+  height: 100%;
+  overflow: hidden;
+}
+.content-area {
+  padding: 30px;
+  background-color: #f9f9f9;
+  color: #0f172a;
+  height: 100vh; /* full screen height */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* prevent scroll here */
+}
+
+/* Helpers */
+.muted { color: #64748b; }
+.w100 { width: 100%; }
+.nowrap { white-space: nowrap; }
+.ellipsis {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.row-highlight {
+  outline: 2px solid #0ea5e9;
+  box-shadow: 0 0 0 4px rgba(14,165,233,.15);
+  border-radius: 8px;
+}
+
+/* -------- Headings -------- */
+h2 {
+  color: #0f2454;
+  font-size: 36px;
+  font-weight: 800;
+  margin: 10px 0 18px;
+  letter-spacing: .3px;
+}
+.dashboard-page h2 {
+  margin: 6px 0 10px;
+  font-size: 22px;
+  font-weight: 800;
+  color: #0f2454;
+}
+
+/* -------- Buttons -------- */
+.btn {
+  display: inline-block;
+  padding: 10px 18px;
+  border-radius: 12px;
+  border: none;
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  transition: .2s ease;
+  text-decoration: none;
+  box-shadow: 0 1px 0 rgba(0,0,0,.06);
+}
+.btn-sm { padding: 8px 12px; font-size: 13px; border-radius: 10px; }
+.btn:hover { opacity: .95; transform: translateY(-1px); }
+.btn:focus { outline: 3px solid rgba(0,123,255,.35); outline-offset: 2px; }
+
+.btn-add { background-color: #0d6efd; color: #fff; }
+.btn-upload { background-color: #28a745; color: #fff; }
+.btn-assign { background-color: #17a2b8; color: #fff; }
+.btn-edit { background-color: #ffc107; color: #212529; }
+.btn-delete { background-color: #dc3545; color: #fff; }
+.btn-print { background-color: #6c757d; color: #fff; }
+.btn-success { background-color: #20c997; color: #fff; }
+.btn-primary { background-color: #0d6efd; color: #fff; }
+.btn-secondary { background-color: #6c757d; color: #fff; }
+.btn-clear { background: #eee; color: #333; }
+
+.btn:disabled,
+.btn[disabled] {
+  opacity: .55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+.btn-delete.is-blocked {
+  background: #e5e7eb;
+  color: #9ca3af;
+  border: 1px solid #e5e7eb;
+  cursor: not-allowed;
+}
+.btn-delete.is-blocked:hover { opacity: 1; transform: none; }
+
+/* -------- Action Bar -------- */
+.top-action-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 12px 4px 18px;
+}
+.top-action-bar > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.archive-toggle { display: flex; align-items: center; gap: 10px; }
+.search-wrap { margin-left: auto; }
+.search-wrap form { display: flex; gap: 8px; align-items: center; }
+.search-input {
+  padding: 10px 12px;
+  border: 1px solid #d6d8dc;
+  border-radius: 10px;
+  min-width: 280px;
+  font-size: 14px;
+  background: #fff;
+}
+
+/* -------- Upload Form -------- */
+.upload-form.upload-compact {
+  background: #fff;
+  border: 1px solid #eef2f5;
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  box-shadow: 0 10px 30px rgba(2,13,43,.06);
+}
+.upload-compact .upload-label {
+  color: #0f2454;
+  font-weight: 800;
+  font-size: 16px;
+  min-width: 140px;
+}
+.upload-compact .file-input-wrap { flex: 1; }
+.upload-compact input[type="file"] {
+  width: 100%;
+  height: 42px;
+  padding: 6px 10px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+.btn.btn-upload { border-radius: 12px; }
+
+/* -------- Table -------- */
+.table-wrap {
+  flex: 1; /* take remaining height */
+  overflow-y: auto; /* scroll only table */
+  overflow-x: auto;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 10px 30px rgba(2,13,43,.06);
+}
+
+/* optional smooth scroll */
+.table-wrap::-webkit-scrollbar {
+  width: 8px;
+}
+.table-wrap::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+.table-wrap::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+}
+thead {
+  background: #eef1f6;
+  text-transform: uppercase;
+  font-size: 13px;
+  color: #334155;
+  position: sticky;
+  top: 0; /* header sticks */
+  z-index: 2;
+}
+th, td {
+  padding: 18px;
+  text-align: center;
+  font-size: 14px;
+  border-bottom: 1px solid #eef2f5;
+}
+tbody tr:hover { background: #fafbfd; }
+
+/* Actions column */
+td.actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  flex-wrap: nowrap;
+}
+thead th:nth-child(5),
+tbody td:nth-child(5) { min-width: 360px; }
+
+/* Name / Student No / Email */
+thead th:nth-child(1),
+tbody td:nth-child(1),
+thead th:nth-child(2),
+tbody td:nth-child(2),
+thead th:nth-child(3),
+tbody td:nth-child(3) {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+thead th:nth-child(1),
+tbody td:nth-child(1) { max-width: 260px; }
+thead th:nth-child(2),
+tbody td:nth-child(2) { max-width: 220px; }
+thead th:nth-child(3),
+tbody td:nth-child(3) { max-width: 280px; }
+
+/* --------------------------------
+   MODALS – ADD + RFID (compact)
+   -------------------------------- */
+.modal {
+  position: fixed;
+  inset: 0;
+  display: none;              /* hidden by default */
+  z-index: 2000;
+  background-color: rgba(0,0,0,.5);
+}
+.modal.show {
+  display: flex;              /* center using flexbox */
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-content {
+  background: #ffffff;
+  padding: 18px 20px 16px;
+  border-radius: 12px;
+  width: 520px;
+  max-width: 95%;
+  box-shadow: 0 18px 45px rgba(15,23,42,.18);
+  position: relative;
+  margin: 0;                  /* no extra margin */
+}
+
+.modal-close {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  font-size: 22px;
+  cursor: pointer;
+  color: #9ca3af;
+  border: none;
+  background: transparent;
+}
+.modal-close:hover { color: #000; }
+
+/* Title inside modal-content */
+.modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 10px;
+  color: #111827;
+}
+
+/* Basic form items used in add/RFID modals */
+.form-group { margin-bottom: 12px; }
+label {
+  font-weight: 600;
+  margin-bottom: 4px;
+  display: block;
+  font-size: 13px;
+  color: #4b5563;
+}
+input[type="text"],
+input[type="email"],
+select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #d6d8dc;
+  border-radius: 8px;
+  font-size: 13px;
+  background: #fff;
+  transition: border-color .2s;
+  height: 34px;
+  box-sizing: border-box;
+}
+input:focus,
+select:focus {
+  border-color: #2563eb;
+  outline: none;
+  box-shadow: 0 0 0 1px rgba(37,99,235,.25);
+}
+#rfidStatus {
+  margin-top: 10px;
+  font-size: 13px;
+  color: #dc3545;
+}
+
+/* ===== Compact modal panel (same behaviour as teacher; if you use .modal-panel) ===== */
+.modal-panel {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.18);
+  padding: 16px 20px 14px;
+  max-height: 90vh;
+  overflow: visible;
+  position: relative;
+}
+.modal-panel-sm {
+  width: 520px;
+  max-width: 95%;
+}
+
+/* Compact grid form (for add/edit) */
+.compact-form {
+  margin-top: 4px;
+}
+.compact-form .form-grid-2,
+.emodal-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 14px;
+}
+.compact-form .field {
+  display: flex;
+  flex-direction: column;
+}
+.compact-form .field.full-row {
+  grid-column: 1 / -1;
+}
+.compact-form label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #4b5563;
+  margin-bottom: 2px;
+}
+.compact-form .req {
+  color: #dc2626;
+  font-weight: 700;
+}
+.compact-form .hint {
+  font-size: 11px;
+  font-weight: 400;
+  color: #9ca3af;
+  margin-left: 2px;
+}
+.compact-form input,
+.compact-form select,
+.emodal-grid input,
+.emodal-grid select {
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  padding: 4px 8px;
+  height: 34px;
+  font-size: 13px;
+  outline: none;
+}
+.compact-form input:focus,
+.compact-form select:focus,
+.emodal-grid input:focus,
+.emodal-grid select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.25);
+}
+
+/* Footer buttons for compact modals */
+.modal-actions,
+.emodal-actions {
+  margin-top: 14px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  align-items: center;
+}
+
+/* --------------------------------
+   EDIT MODAL (.emodal – overlay)
+   -------------------------------- */
+.emodal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  place-items: center;
+  z-index: 3201;
+}
+.emodal.show { display: grid; }
+
+.emodal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15,23,42,.55);
+  backdrop-filter: blur(2px);
+  z-index: 3200;
+  display: none;
+}
+.emodal.show + .emodal-backdrop { display: block; }
+
+.emodal-card {
+  width: min(540px, 95vw);          /* more compact like teacher */
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 28px 80px rgba(2,8,23,.35);
+  padding: 18px 20px 16px;
+  animation: modalIn .18s ease-out;
+}
+
+.emodal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.emodal-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f2454;
+}
+.emodal-x {
+  border: none;
+  background: transparent;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  color: #64748b;
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+.emodal-x:hover { background: #f1f5f9; color: #0f172a; }
+
+@keyframes modalIn {
+  from {opacity: 0; transform: translateY(8px) scale(.98);}
+  to   {opacity: 1; transform: translateY(0) scale(1);}
+}
+
+/* -------- Confirm Modal -------- */
+.cmodal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(15,23,42,.55);
+  backdrop-filter: blur(2px);
+  z-index: 3000;
+}
+.cmodal {
+  position: fixed; inset: 0;
+  display: grid; place-items: center;
+  z-index: 3001;
+}
+.cmodal[hidden], .cmodal-backdrop[hidden] { display: none !important; }
+.cmodal-card {
+  width: min(440px, 92vw);
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(2,8,23,.35);
+  padding: 22px 20px 18px;
+  animation: cmodalIn .18s ease-out;
+}
+@keyframes cmodalIn {
+  from { opacity: 0; transform: translateY(-6px) scale(.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.cmodal-card h3 { margin: 0 0 8px; color: #0f2454; font-size: 20px; font-weight: 800; }
+.cmodal-card p { margin: 0 0 16px; color: #1f2937; line-height: 1.4; }
+.cmodal-actions { display: flex; gap: 10px; justify-content: flex-end; align-items: center; }
+.cmodal-x {
+  position: absolute; right: 10px; top: 8px;
+  border: none; background: transparent; font-size: 20px; line-height: 1;
+  cursor: pointer; color: #64748b; border-radius: 999px; padding: 2px 8px;
+}
+.cmodal-x:hover { background: #f1f5f9; color: #0f172a; }
+
+/* -------- Toast -------- */
+.toast-wrap {
+  position: fixed; inset: auto 0 24px 0;
+  display: grid; place-items: center;
+  pointer-events: none; z-index: 4000;
+}
+.toast {
+  min-width: 280px; max-width: 92vw;
+  background: #0f172a; color: #e2e8f0;
+  border-radius: 14px;
+  box-shadow: 0 20px 60px rgba(2,8,23,.35);
+  padding: 12px 16px;
+  display: grid; grid-template-columns: 22px auto;
+  gap: 10px; align-items: center;
+  transform: translateY(16px);
+  opacity: 0;
+  transition: transform .18s ease-out, opacity .18s ease-out;
+  pointer-events: auto;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast .t-icon {
+  width: 22px; height: 22px;
+  border-radius: 999px; background: #16a34a;
+  display: grid; place-items: center;
+  color: #0f172a; font-weight: 800;
+}
+.toast.error .t-icon { background: #dc2626; }
+.toast .t-msg { font-size: 14px; line-height: 1.35; }
+
+/* -------- Responsive -------- */
+@media (max-width: 1100px) {
+  thead th:nth-child(5), tbody td:nth-child(5) { min-width: 330px; }
+}
+@media (max-width: 900px) {
+  .emodal-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 720px) {
+  td.actions { justify-content: flex-start; flex-wrap: wrap; row-gap: 6px; }
+  .search-input { min-width: 180px; }
+  th, td { padding: 14px; font-size: 13px; }
+}

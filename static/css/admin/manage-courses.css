@@ -1,0 +1,190 @@
+/* manage-courses.css – compact + scrollable tables (works with your current HTML) */
+
+/* --- Base --- */
+body { font-family:'Roboto',sans-serif; margin:0; }
+.content-area { background:#f9f9f9; padding:24px; }
+h2 { color:#0f2454; font-size:32px; font-weight:800; margin:8px 0 14px; letter-spacing:.3px; }
+.muted{ color:#64748b; }
+
+/* --- Buttons --- */
+.btn{
+  padding:10px 18px; border-radius:12px; font-size:14px; text-decoration:none;
+  cursor:pointer; transition:.2s ease; border:none; font-weight:700; display:inline-block; line-height:1;
+  box-shadow:0 1px 0 rgba(0,0,0,.06);
+}
+.btn-sm{ padding:8px 12px; font-size:13px; border-radius:10px; }
+.btn:hover{ opacity:.95; transform:translateY(-1px); }
+.btn:focus{ outline:3px solid rgba(13,110,253,.35); outline-offset:2px; }
+
+.btn-add,.btn-primary{ background:#0d6efd; color:#fff; }
+.btn-secondary{ background:#6c757d; color:#fff; }
+.btn-clear{ background:#eee; color:#333; }
+.btn-edit{ background:#ffc107; color:#212529; }
+.btn-delete{ background:#dc3545; color:#fff; }
+.btn-restore{ background:#10b981; color:#fff; }
+
+/* Disabled look */
+.btn:disabled,
+.btn[disabled],
+.btn.is-blocked,
+.btn-delete.is-blocked,
+.btn-delete[disabled],
+.btn-edit.is-blocked,
+.btn-edit[disabled]{
+  background:#e5e7eb!important; color:#6b7280!important; cursor:not-allowed!important;
+  box-shadow:none!important; transform:none!important; border:1px solid #e5e7eb!important;
+}
+
+/* --- Top bar --- */
+.top-action-bar{ display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin:10px 4px 16px; }
+.top-action-bar>.action-left{ display:flex; align-items:center; gap:10px; }
+.archive-toggle{ display:flex; align-items:center; gap:10px; }
+.search-wrap form{ display:flex; gap:8px; align-items:center; }
+.search-input{
+  padding:10px 12px; border:1px solid #d6d8dc; border-radius:10px;
+  min-width:260px; font-size:14px; background:#fff;
+}
+
+/* --- Panels --- */
+.panel{
+  background:#fff; border:1px solid #eef2f5; border-radius:16px;
+  box-shadow:0 10px 30px rgba(2,13,43,.06); margin-bottom:16px;
+}
+.panel-header{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:12px 14px; border-bottom:1px solid #eef2f5;
+}
+.panel-header h3{ margin:0; font-size:18px; color:#0f2454; font-weight:800; }
+.view-badge{
+  display:inline-block; margin-left:.5rem; font-size:.72rem; font-weight:800; letter-spacing:.02em;
+  color:#0f172a; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:999px; padding:.18rem .5rem;
+}
+
+/* --- Table shells (each panel scrolls) --- */
+.table-wrap{
+  border-radius:0 0 16px 16px;
+  /* Height tuned for 3 panels on most laptops; adjust if needed */
+  max-height: 260px;
+  overflow:auto;
+}
+
+/* Sticky headers so labels stay visible while body scrolls */
+.table{ width:100%; border-collapse:separate; border-spacing:0; background:#fff; }
+.table thead{ position:sticky; top:0; z-index:2; background:#eef1f6; }
+.table thead tr:first-child th:first-child{ border-top-left-radius:0; }
+.table thead tr:first-child th:last-child{ border-top-right-radius:0; }
+
+/* Compact cells */
+.table thead{ text-transform:uppercase; font-size:12px; color:#334155; }
+.table th,.table td{
+  padding:10px 12px; text-align:left; font-size:13px; border-bottom:1px solid #eef2f5; vertical-align:middle;
+}
+.table tbody tr:hover{ background:#fafbfd; }
+
+/* Width helpers per table types (kept reasonable defaults) */
+.nowrap{ white-space:nowrap; }
+.ellipsis{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:320px; }
+
+/* Actions column */
+.actions{ display:flex; align-items:center; gap:8px; flex-wrap:nowrap; white-space:nowrap; }
+.table thead th:last-child, .table tbody td:last-child{ min-width:260px; }
+
+/* Archived visuals */
+.row-archived{ opacity:.65; }
+.badge-archived{
+  display:inline-block; margin-left:.5rem; font-size:.75rem; line-height:1;
+  padding:.2rem .4rem; border-radius:.375rem; background:#e5e7eb; color:#111827; font-weight:700;
+}
+
+/* Program pill */
+.program-pill{
+  display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px;
+  background:#eef2ff; color:#3730a3; font-weight:600; font-size:12px; white-space:nowrap;
+}
+.program-pill small{ opacity:.8; font-weight:700; }
+
+/* Status pills */
+.status-pill{
+  display:inline-flex; align-items:center; gap:.35rem;
+  padding:6px 10px; border-radius:999px; font-weight:800; font-size:12px; color:#fff;
+}
+.status-pill.active{ background:#16a34a; }
+.status-pill.upcoming{ background:#0284c7; }
+.status-pill.past{ background:#64748b; }
+
+/* --- Modals (unchanged visuals) --- */
+.modal{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:2000; }
+.modal.show{ display:block; }
+.modal-content{
+  background:#fff; margin:5% auto; padding:24px; border-radius:12px; width:680px; max-width:92%;
+  box-shadow:0 10px 30px rgba(0,0,0,.2); position:relative; animation:fadeIn .25s ease;
+}
+.modal-close{ position:absolute; right:14px; top:10px; background:transparent; border:none; font-size:22px; cursor:pointer; color:#6b7280; }
+.modal-close:hover{ color:#111827; }
+
+.form-grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:8px; }
+.form-group label{ display:block; font-weight:700; margin-bottom:6px; }
+.form-group input,.form-group select{ width:100%; height:42px; border:1px solid #d6d8dc; border-radius:10px; padding:0 12px; background:#fff; }
+.form-group input:focus,.form-group select:focus{ outline:2px solid rgba(13,110,253,.35); border-color:#0d6efd; }
+.form-help{ margin-top:6px; font-size:12px; color:#6b7280; }
+.modal-actions{ display:flex; gap:10px; justify-content:flex-end; margin-top:16px; }
+
+@keyframes fadeIn{ from{opacity:0; transform:translateY(-10px);} to{opacity:1; transform:translateY(0);} }
+
+/* --- Confirm modal --- */
+.cmodal-backdrop{ position:fixed; inset:0; background:rgba(15,23,42,.55); backdrop-filter:blur(2px); z-index:3000; }
+.cmodal{ position:fixed; inset:0; display:grid; place-items:center; z-index:3001; }
+.cmodal[hidden], .cmodal-backdrop[hidden]{ display:none!important; }
+.cmodal-card{
+  width:min(440px,92vw); background:#fff; border-radius:16px; box-shadow:0 24px 60px rgba(2,8,23,.35);
+  padding:22px 20px 18px; position:relative; animation:cIn .18s ease-out;
+}
+@keyframes cIn{ from{opacity:0; transform:translateY(-6px) scale(.98);} to{opacity:1; transform:translateY(0) scale(1);} }
+.cmodal-card h3{ margin:0 0 8px; color:#0f2454; font-size:20px; font-weight:800; }
+.cmodal-card p{ margin:0 0 16px; color:#1f2937; }
+.cmodal-actions{ display:flex; gap:10px; justify-content:flex-end; align-items:center; }
+.cmodal-x{ position:absolute; right:10px; top:8px; border:none; background:transparent; font-size:20px; line-height:1; cursor:pointer; color:#64748b; border-radius:999px; padding:2px 8px; }
+.cmodal-x:hover{ background:#f1f5f9; color:#0f172a; }
+
+/* Optional: visual cue when viewing archived-only */
+.archived-view .panel{ border-color:#fde68a; }
+.archived-view .panel-header h3::after{ content:" • Archived view"; font-size:.8rem; margin-left:.4rem; color:#92400e; }
+
+/* --- Toast --- */
+.toast-wrap{
+  position:fixed; inset:auto 0 24px 0; display:grid; place-items:center;
+  pointer-events:none; z-index:4000;
+}
+.toast{
+  min-width:280px; max-width:92vw; background:#0f172a; color:#e2e8f0;
+  border-radius:14px; box-shadow:0 20px 60px rgba(2,8,23,.35);
+  padding:12px 16px; display:grid; grid-template-columns:22px auto; gap:10px; align-items:center;
+  transform:translateY(16px); opacity:0; transition:transform .18s ease-out, opacity .18s ease-out; pointer-events:auto;
+}
+.toast.show{ transform:translateY(0); opacity:1; }
+.toast .t-icon{ width:22px; height:22px; border-radius:999px; background:#16a34a; display:grid; place-items:center; color:#0f172a; font-weight:800; }
+.toast.error .t-icon{ background:#dc2626; }
+.toast .t-msg{ font-size:14px; line-height:1.35; }
+
+/* --- Responsive tweaks --- */
+@media (max-width: 1200px){
+  .table-wrap{ max-height: 230px; }
+}
+@media (max-width: 1024px){
+  .table thead th:last-child, .table tbody td:last-child{ min-width:300px; }
+}
+@media (max-width: 720px){
+  .content-area{ padding:16px; }
+  h2{ font-size:26px; }
+  .form-grid-2{ grid-template-columns:1fr; }
+  .search-input{ min-width:180px; }
+  .table th,.table td{ padding:10px; font-size:12px; }
+  .actions{ flex-wrap:wrap; row-gap:6px; justify-content:flex-start; }
+  .table-wrap{ max-height: 220px; }
+}
+.dashboard-page h2 {
+    margin: 6px 0 10px;
+    font-size: 22px;
+    font-weight: 800;
+    color: #0f2454;
+}
