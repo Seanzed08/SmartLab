@@ -1,0 +1,1165 @@
+{% load static %}
+{% load custom_filters %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Lab Availability | NEUST</title>
+
+  <!-- Global styles -->
+  <link rel="stylesheet" href="{% static 'css/admin/admin-style.css' %}">
+  <link rel="stylesheet" href="{% static 'css/teacher/schedule.css' %}">
+  <!-- Page CSS -->
+  <link rel="stylesheet" href="{% static 'css/teacher/lab-availability.css' %}">
+  <style>
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+/* === Cancel confirmation modal – nicer design === */
+#cancelConfirmOverlay {
+  background: rgba(15, 23, 42, 0.45);
+}
+.btn.danger{background:#e11d48;color:#fff;}
+.btn.danger:hover{background:#b91c1c;}
+.modal.global.confirm {
+  max-width: 420px;
+  margin: 0 auto;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.35);
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+}
+
+#cancelConfirmOverlay .modal-header {
+  padding: 14px 18px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: linear-gradient(to right, #fee2e2, #fef2f2);
+}
+
+#cancelConfirmOverlay .modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: #991b1b;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#cancelConfirmOverlay .modal-header h3::before {
+  content: "⚠️";
+  font-size: 20px;
+}
+
+#cancelConfirmOverlay .close-x {
+  color: #6b7280;
+  font-size: 20px;
+}
+
+#cancelConfirmOverlay .modal-form {
+  padding: 18px 20px 16px;
+}
+
+.confirm-title{
+  font-size: 16px;
+  font-weight: 600;
+  color:#111827;
+  margin-bottom: 6px;
+}
+
+.confirm-note{
+  font-size: 14px;
+  color:#4b5563;
+  margin-bottom: 18px;
+  line-height: 1.4;
+}
+
+.modal.global.confirm .modal-actions.right{
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+  margin-top: 4px;
+}
+
+/* Buttons inside cancel modal */
+#cancelConfirmOverlay .btn {
+  min-width: 120px;
+  justify-content: center;
+}
+
+#cancelConfirmOverlay .btn.ghost {
+  background:#f3f4f6;
+  color:#111827;
+}
+
+#cancelConfirmOverlay .btn.ghost:hover {
+  background:#e5e7eb;
+}
+
+#cancelConfirmOverlay .btn.danger {
+  background:#ef4444;
+  color:#ffffff;
+  font-weight: 700;
+}
+
+#cancelConfirmOverlay .btn.danger:hover {
+  background:#b91c1c;
+}
+</style>
+
+</head>
+<body class="teacher-page">
+<div class="dashboard-container">
+  {% include 'includes/teacher_sidebar.html' %}
+
+  <div class="main-panel">
+    {% include 'includes/teacher_header.html' %}
+
+    <section class="content-area">
+
+      <!-- Header -->
+      <div class="schedule-header">
+        <h2 class="weekly-title">Lab Availability</h2>
+        <div class="schedule-toolbar">
+          {% if can_request_lab %}
+            <button type="button" id="openUtilizationBtn" class="btn primary">Request Lab Usage</button>
+          {% endif %}
+          {% if show_requests %}
+            <button type="button" id="openPendingBtn" class="btn ghost">
+              Pending Requests
+              <span class="badge-count" id="pendingCount">{{ pending_requests|length }}</span>
+            </button>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Lab selector -->
+      <div class="lab-availability-header">
+        <form method="get" id="labFilterForm" class="lab-select">
+          <label for="lab_id">Select Laboratory:</label>
+          <select name="lab_id" id="lab_id" onchange="this.form.submit()">
+            {% for lab in labs %}
+              <option value="{{ lab.0 }}" {% if lab.0|stringformat:"s" == selected_lab_id|stringformat:"s" %}selected{% endif %}>
+                Lab {{ lab.1 }}{% if assigned_lab and lab.0 == assigned_lab %} (Assigned){% endif %}
+              </option>
+            {% endfor %}
+          </select>
+
+          <span class="schedule-legend inline" aria-label="Legend">
+            <span class="legend-item"><i class="legend-swatch sched"></i> Scheduled</span>
+            <span class="legend-item"><i class="legend-swatch req"></i> Request</span>
+            <span class="legend-item"><i class="legend-swatch active"></i> Active</span>
+          </span>
+
+          <input type="hidden" name="week" value="{{ base_week }}">
+          <input type="hidden" name="open" id="keepOpen" value="">
+        </form>
+      </div>
+
+      <!-- Week nav -->
+      <a id="weekly-schedule"></a>
+      <div class="week-navigation">
+        <h3 class="week-range">{{ week_range_display }}</h3>
+        <div class="week-buttons">
+          <a class="btn ghost week-nav" href="?lab_id={{ selected_lab_id }}&week={{ prev_week }}#weekly-schedule">← Previous</a>
+          <a class="btn ghost week-nav" href="?lab_id={{ selected_lab_id }}&week={{ next_week }}#weekly-schedule">Next →</a>
+        </div>
+      </div>
+
+      {% if selected_lab_num %}
+        <h3 class="lab-title">Lab {{ selected_lab_num }} Schedule</h3>
+      {% endif %}
+
+      <!-- Weekly Grid -->
+      <div class="schedule-grid card">
+        <table class="weekly-schedule table">
+          <thead>
+          <tr>{% for day in days %}<th>{{ day }}</th>{% endfor %}</tr>
+          </thead>
+          <tbody>
+          <tr>
+            {% for day in days %}
+              <td class="day-cell">
+                <!-- SCHEDULES -->
+                <div class="cell-section">
+                  <div class="cell-title with-line">
+                    <span>Schedules</span><i></i>
+                  </div>
+                  {% for time in time_slots %}
+                    {% for entry in schedule_map|get_item:day|get_item:time %}
+                      {% if entry.kind != 'request' %}
+                        <div class="entry-block {% if entry.active %}active-session{% endif %}"
+                             data-kind="class"
+                             data-schedule-id="{{ entry.schedule_id|default:'' }}"
+                             data-date="{{ entry.date|default:'' }}"
+                             data-section="{{ entry.year_section|default:'' }}"
+                             data-start="{{ entry.start_time|default:'' }}"
+                             data-end="{{ entry.end_time|default:'' }}"
+                             data-faculty="{{ entry.faculty_id|default:'' }}">
+                          {% if entry.faculty %}<div class="title eb-teacher">{{ entry.faculty|short_name }}</div>{% endif %}
+                          {% if entry.course %}<div class="meta eb-course">{{ entry.course }}</div>{% endif %}
+                          {% if entry.year_section %}<div class="meta eb-course">{{ entry.year_section }}</div>{% endif %}
+                          <div class="meta eb-time">{{ entry.time_display|default:entry.time|default:'' }}</div>
+                        </div>
+                      {% endif %}
+                    {% endfor %}
+                  {% endfor %}
+                </div>
+
+                <!-- REQUESTS (excludes your own; handled server-side) -->
+                <div class="cell-section">
+                  <div class="cell-title with-line alt">
+                    <span>Requests</span><i></i>
+                  </div>
+                  {% for time in time_slots %}
+                    {% for entry in schedule_map|get_item:day|get_item:time %}
+                      {% if entry.kind == 'request' %}
+                        <div class="entry-block request"
+                             data-kind="request"
+                             data-date="{{ entry.date|default:'' }}"
+                             data-section="{{ entry.section|default:'' }}"
+                             data-start="{{ entry.start_time|default:'' }}"
+                             data-end="{{ entry.end_time|default:'' }}"
+                             data-faculty="{{ entry.faculty_id|default:'' }}">
+                          <div class="title eb-teacher">Request: {{ entry.status|default:"Pending" }}</div>
+                          {% if entry.course %}<div class="meta eb-course">{{ entry.course }}</div>{% endif %}
+                          {% if entry.section %}<div class="meta eb-course">{{ entry.section }}</div>{% endif %}
+                          <div class="meta eb-time">
+                            {{ entry.time_display|default:entry.time|default:'' }}
+                            {% if entry.requested_by_short %} • by {{ entry.requested_by_short }}{% endif %}
+                          </div>
+                        </div>
+                      {% endif %}
+                    {% endfor %}
+                  {% endfor %}
+                </div>
+              </td>
+            {% endfor %}
+          </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- =================== MODALS =================== -->
+
+      <!-- Request Lab Usage -->
+      <div id="scheduleOverlay" class="modal-overlay local" style="display:none;">
+        <div class="modal-content two-col">
+          <div class="modal-header sticky">
+            <h3 class="modal-title">Request Lab Usage</h3>
+            <div class="week-buttons">
+              <a class="btn ghost" href="?lab_id={{ selected_lab_id }}&week={{ prev_week }}&open=request#weekly-schedule">← Previous</a>
+              <a class="btn ghost" href="?lab_id={{ selected_lab_id }}&week={{ next_week }}&open=request#weekly-schedule">Next →</a>
+            </div>
+            <button type="button" class="close-x" id="closeUtilizationBtnX" aria-label="Close">×</button>
+          </div>
+
+          <div class="modal-body">
+            <!-- LEFT: FORM -->
+            <form method="POST" action="{% url 'submit_utilization_request' %}" class="schedule-form" id="utilForm" novalidate>
+              {% csrf_token %}
+
+              <div class="form-subtitle">Requester: <strong>{{ user_shortname }}</strong></div>
+              <div class="form-subtitle" id="labFormTitle">Selected: —</div>
+
+              <label>Laboratory:</label>
+              <select name="lab_id" id="modal_lab_select" required>
+                {% for lab in labs %}
+                  <option value="{{ lab.0 }}"
+                    {% if lab.0|stringformat:"s" == selected_lab_id|stringformat:"s" %}selected{% endif %}>
+                    Lab {{ lab.1 }}{% if assigned_lab and lab.0 == assigned_lab %} (Assigned){% endif %}
+                  </option>
+                {% endfor %}
+              </select>
+
+              <label>Course:</label>
+              <select name="course_id" required>
+                <option value="">-- Select Course --</option>
+                {% for cid, label in teacher_courses %}
+                  <option value="{{ cid }}">{{ label }}</option>
+                {% empty %}
+                  <option value="">No active courses found</option>
+                {% endfor %}
+              </select>
+
+              <label>Year and Section:</label>
+              <input type="text" name="student_year_and_section" required placeholder="e.g., BSCS 2A" />
+
+              <div class="grid-2">
+                <div>
+                  <label>Date:</label>
+                  <input type="date" name="date" required min="{{ today|date:'Y-m-d' }}">
+                </div>
+                <div></div>
+              </div>
+
+              <div class="grid-2">
+                <div>
+                  <label>Start Time:</label>
+                  <input type="time" name="start_time" required>
+                </div>
+                <div>
+                  <label>End Time:</label>
+                  <input type="time" name="end_time" required>
+                </div>
+              </div>
+
+              <div>
+                <label>Remarks:</label>
+                <input type="text" name="remarks" placeholder="Optional notes">
+              </div>
+
+              <div class="muted" style="margin-top:4px">
+                If the time is free (and within Operating Time), your request will be scheduled automatically.
+                Otherwise it will be submitted as Pending.
+              </div>
+
+              <div class="modal-actions">
+                <button type="submit" class="btn primary">Submit</button>
+                <button type="button" class="btn ghost" id="closeUtilizationBtn">Cancel</button>
+              </div>
+            </form>
+
+            <!-- RIGHT: Flip-able pane -->
+            <div class="preview-pane" id="rightPane">
+              <div class="preview-header">
+                <div class="preview-tabs">
+                  <button type="button" class="tab-btn active" data-pane="preview" aria-selected="true">This Week Preview</button>
+                  <button type="button" class="tab-btn" data-pane="myreq" aria-selected="false">Your Lab Requests</button>
+                </div>
+                <div class="ph-title" id="labPreviewTitle">Selected Lab — Preview</div>
+                <div class="ph-range" id="labWeekRange">{{ week_range_display }}</div>
+              </div>
+
+              <!-- Pane: Preview -->
+              <div class="pane" id="pane-preview">
+                <div class="preview-scroll">
+                  <table class="weekly-schedule mini" id="labGrid">
+                    <thead>
+                    <tr>
+                      {% for d in days %}
+                        <th>{{ d }}</th>
+                      {% endfor %}
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                      {% for d in days %}
+                        <td class="day-cell" data-day="{{ d }}"></td>
+                      {% endfor %}
+                    </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Pane: Your Requests -->
+              <div class="pane" id="pane-myreq">
+                {% if own_requests %}
+                  <div class="req-list">
+                    {% for req in own_requests %}
+                      {% with sc=req.status_class|default_if_none:'' %}
+                        <div class="req-item">
+                          <div><strong>Lab:</strong> Lab {{ req.lab_num|default:"—" }}</div>
+                          <span class="req-sep">•</span>
+                          <div><strong>Course:</strong> {{ req.course|default:"—" }}</div>
+                          <span class="req-sep">•</span>
+                          <div><strong>Day:</strong> {{ req.date|date:"l" }}</div>
+                          <span class="req-sep">•</span>
+                          <div><strong>Date:</strong> {{ req.date|date:"M. d, Y" }}</div>
+                          <span class="req-sep">•</span>
+                          <div><strong>Time:</strong> {{ req.start_time|time:"g:i a" }} - {{ req.end_time|time:"g:i a" }}</div>
+                          <span class="req-sep">•</span>
+                          <div><strong>Year/Section:</strong> {{ req.section|default:"—" }}</div>
+                          <span class="req-sep">•</span>
+                          <div>
+                            <span class="status-pill {{ sc }}">{{ req.status }}</span>
+                          </div>
+                          {% if req.remarks %}
+                            <span class="req-sep">•</span>
+                            <div><strong>Remarks:</strong> {{ req.remarks }}</div>
+                          {% endif %}
+                        </div>
+                      {% endwith %}
+                    {% endfor %}
+                  </div>
+                {% else %}
+                  <div class="request-empty">No requests found.</div>
+                {% endif %}
+              </div>
+            </div>
+          </div> <!-- /modal-body -->
+        </div>
+      </div>
+
+      <!-- Pending (selected lab) -->
+      <div id="pendingOverlay" class="modal-overlay local" style="display:none;">
+        <div class="modal global wide">
+          <div class="modal-header">
+            <h3 id="pendingTitle">
+              Pending Requests{% if selected_lab_num %} (Lab {{ selected_lab_num }}){% endif %}
+            </h3>
+            <div class="week-buttons"></div>
+            <button type="button" class="close-x" id="closePendingBtn2X" aria-label="Close">×</button>
+          </div>
+          <div class="modal-form scrollable">
+            {% if pending_requests %}
+              <div class="pending-cards">
+                {% for req in pending_requests %}
+                  <div class="pending-card">
+                    <div class="pc-row">
+                      <div><span class="pc-label">Lab:</span> <span class="pc-value">Lab {{ req.lab_num|default:"—" }}</span></div>
+                      <div><span class="pc-label">Requested By:</span> <span class="pc-value">{{ req.faculty|short_name }}</span></div>
+                      <div><span class="pc-label">Course:</span> <span class="pc-value">{{ req.course|default:"—" }}</span></div>
+                      <div><span class="pc-label">Status:</span>
+                        <span class="status-pill pending">{{ req.status|default:"Pending" }}</span>
+                      </div>
+                    </div>
+
+                    <div class="pc-row">
+                      <div><span class="pc-label">Day:</span> <span class="pc-value">{{ req.date|date:"l" }}</span></div>
+                      <div><span class="pc-label">Date:</span> <span class="pc-value">{{ req.date|date:"M. d, Y" }}</span></div>
+                      <div><span class="pc-label">Time:</span>
+                        <span class="pc-value">{{ req.start_time|time:"g:i a" }} - {{ req.end_time|time:"g:i a" }}</span>
+                      </div>
+                      <div><span class="pc-label">Year/Section:</span> <span class="pc-value">{{ req.section|default:"—" }}</span></div>
+                    </div>
+
+                    {% if req.remarks %}
+                      <div class="pc-row">
+                        <div class="pc-remarks"><span class="pc-label">Remarks:</span> <span class="pc-value">{{ req.remarks }}</span></div>
+                      </div>
+                    {% endif %}
+
+                    <!-- ACTIONS -->
+                    <div class="pc-actions">
+                      {% if req.date < today %}
+                        <!-- Past date = disable -->
+                        <button class="btn ghost" disabled>Expired</button>
+                      {% elif user_is_incharge_of_pending_lab or req.can_approve %}
+                        <button class="btn success"
+                                data-approve-url="{% url 'approve_reservation' req.id %}"
+                                onclick="approveReservation(this)">Approve</button>
+
+                        <button class="btn danger"
+                                data-reject-url="{% url 'reject_reservation' req.id %}"
+                                onclick="rejectReservation(this)">Reject</button>
+                      {% else %}
+                        <button class="btn success" disabled title="You’re not allowed to approve this request.">Approve</button>
+                        <button class="btn danger" disabled title="You’re not allowed to reject this request.">Reject</button>
+                      {% endif %}
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="request-empty">No pending requests.</div>
+            {% endif %}
+
+            <div class="modal-actions">
+              <button type="button" class="btn ghost" id="closePendingBtn2">Close</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== Edit Section Modal (with Cancel Slot button) ===== -->
+      <div id="editSectionModal" class="modal-overlay" style="display:none;">
+        <div class="modal-content edit card" id="editModalContent" role="dialog"
+             aria-modal="true" aria-labelledby="editModalTitle">
+          <div class="modal-header">
+            <h3 id="editModalTitle">Edit Schedule</h3>
+            <button type="button" class="close-x" onclick="closeEditModal()" aria-label="Close">×</button>
+          </div>
+
+          <div class="modal-body">
+            <div class="field"><label>Teacher</label><div id="roTeacher" class="ro">—</div></div>
+            <div class="field"><label>Course</label><div id="roCourse" class="ro">—</div></div>
+            <div class="field"><label>Time</label><div id="roTime" class="ro">—</div></div>
+
+            <div class="field">
+              <label for="editSectionInput">Year and Section</label>
+              <input id="editSectionInput" type="text" placeholder="e.g., BSIT 2A" autocomplete="off">
+              <div id="editErr" class="error-text" style="display:none;"></div>
+            </div>
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" class="btn ghost" onclick="closeEditModal()">Close</button>
+            <button type="button" class="btn danger" id="cancelSlotBtn">Cancel Slot</button>
+            <button type="button" class="btn primary" id="saveSectionBtn">Save</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pretty confirm modal for cancelling slot -->
+            <!-- Pretty confirm modal for cancelling slot -->
+      <div id="cancelConfirmOverlay" class="modal-overlay" style="display:none;">
+        <div class="modal global confirm" role="dialog" aria-modal="true" aria-labelledby="cancelConfirmTitle">
+          <div class="modal-header">
+            <h3 id="cancelConfirmTitle">Cancel Schedule</h3>
+            <button type="button" class="close-x" onclick="closeCancelConfirm()" aria-label="Close">×</button>
+          </div>
+          <div class="modal-form">
+            <p class="confirm-title">Are you sure you want to cancel this schedule?</p>
+            <p class="confirm-note">
+              This will mark the slot as <strong>Cancelled</strong> and free it for other reservations or lab requests.
+              This action cannot be undone.
+            </p>
+            <div class="modal-actions right">
+              <button type="button" class="btn ghost" onclick="closeCancelConfirm()">Keep Schedule</button>
+              <button type="button" class="btn danger" id="confirmCancelBtn">Yes, Cancel Slot</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+    </section>
+  </div>
+</div>
+
+<!-- Global loading overlay -->
+<div id="loadingOverlay" style="
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.4);
+  z-index:9999;
+  align-items:center;
+  justify-content:center;
+  backdrop-filter:blur(2px);
+">
+  <div style="
+    width:60px;
+    height:60px;
+    border:6px solid #f3f3f3;
+    border-top:6px solid #007bff;
+    border-radius:50%;
+    animation: spin 0.8s linear infinite;
+  "></div>
+</div>
+
+<style>
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+.confirm-title{font-size:18px;font-weight:600;color:#111827;margin-bottom:4px;}
+.confirm-note{font-size:14px;color:#4b5563;margin-bottom:18px;}
+.modal.global.confirm .modal-actions.right{justify-content:flex-end;gap:10px;}
+</style>
+
+<script>
+  // ========= CSRF + loader =========
+  function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return '';
+  }
+  const CSRF = getCookie('csrftoken');
+
+  function showLoader() {
+    const el = document.getElementById('loadingOverlay');
+    if (el) el.style.display = 'flex';
+  }
+  function hideLoader() {
+    const el = document.getElementById('loadingOverlay');
+    if (el) el.style.display = 'none';
+  }
+
+  // ========= Toast helper (single version) =========
+  function showToast(message, opts = {}) {
+    const { type = 'info', inModal = false, anchor, timeout = 2600 } = opts;
+    const t = document.createElement('div');
+    t.className = 'toast ' + (type || 'info') + (inModal ? ' in-modal' : '');
+    t.setAttribute('role', 'alert');
+    t.textContent = String(message || '');
+
+    const host = inModal && anchor
+      ? (document.querySelector(anchor) || document.body)
+      : document.body;
+
+    host.appendChild(t);
+    requestAnimationFrame(() => t.classList.add('show'));
+
+    setTimeout(() => {
+      t.classList.remove('show');
+      setTimeout(() => t.remove(), 220);
+    }, timeout);
+  }
+
+  function safeDecode(val){
+    try{ return decodeURIComponent(String(val || '').replace(/\+/g, ' ')); }
+    catch(_){ return String(val || ''); }
+  }
+
+  // ========= Modal open/close helpers =========
+  function openLocal(id){
+    const el = document.getElementById(id);
+    if(el){ el.style.display='flex'; document.body.classList.add('no-scroll'); }
+  }
+  function closeLocal(id){
+    const el = document.getElementById(id);
+    if(el){ el.style.display='none'; document.body.classList.remove('no-scroll'); }
+  }
+
+  document.getElementById('openUtilizationBtn')?.addEventListener('click', ()=>openLocal('scheduleOverlay'));
+  document.getElementById('closeUtilizationBtn')?.addEventListener('click', ()=>closeLocal('scheduleOverlay'));
+  document.getElementById('closeUtilizationBtnX')?.addEventListener('click', ()=>closeLocal('scheduleOverlay'));
+
+  document.getElementById('openPendingBtn')?.addEventListener('click', ()=>openLocal('pendingOverlay'));
+  document.getElementById('closePendingBtn2')?.addEventListener('click', ()=>closeLocal('pendingOverlay'));
+  document.getElementById('closePendingBtn2X')?.addEventListener('click', ()=>closeLocal('pendingOverlay'));
+
+  ['scheduleOverlay','pendingOverlay'].forEach(id=>{
+    const el=document.getElementById(id);
+    el?.addEventListener('click', (e)=>{ if(e.target===el) closeLocal(id); });
+  });
+
+  // ========= URL helpers =========
+  function forceParam(urlStr, key, value){
+    const u = new URL(urlStr, window.location.origin);
+    if (value == null) { u.searchParams.delete(key); } else { u.searchParams.set(key, value); }
+    return u.toString();
+  }
+  function stripParam(urlStr, key){ return forceParam(urlStr, key, null); }
+  function getOpenParam(){
+    const params = new URLSearchParams(window.location.search);
+    const val = (params.get('open') || '').toLowerCase();
+    return (val === 'request' || val === 'pending') ? val : '';
+  }
+
+  // ========= Keep ?open= in modal week links; strip in main week links =========
+  (function () {
+    document.querySelectorAll('#scheduleOverlay .modal-header .week-buttons a').forEach(a=>{
+      a.href = forceParam(a.href, 'open', 'request');
+    });
+    document.querySelectorAll('#pendingOverlay .modal-header .week-buttons a').forEach(a=>{
+      a.href = forceParam(a.href, 'open', 'pending');
+    });
+    document.querySelectorAll('.week-navigation a.week-nav').forEach(a=>{
+      a.href = stripParam(a.href, 'open');
+    });
+    const keep = document.getElementById('keepOpen');
+    if (keep) keep.value = getOpenParam() || '';
+  })();
+
+  // ========= Auto-open + toasts + form repopulation =========
+  (function(){
+    const url = new URL(window.location.href);
+    const open = getOpenParam(); // '', 'request', 'pending'
+    const err = url.searchParams.get('error');
+    const success = url.searchParams.get('success');
+    const info = url.searchParams.get('info');
+
+    if (open === 'request') openLocal('scheduleOverlay');
+    if (open === 'pending') openLocal('pendingOverlay');
+
+    function setVal(sel, val) {
+      if (!val) return;
+      const el = document.querySelector(sel);
+      if (!el) return;
+      el.value = val;
+      const evt = new Event('change', { bubbles: true });
+      el.dispatchEvent(evt);
+    }
+
+    if (err) {
+      const anchor  = (open === 'request') ? '#scheduleOverlay .modal-content'
+                   : (open === 'pending') ? '#pendingOverlay .modal'
+                   : undefined;
+      const msg     = safeDecode(err);
+      showToast(msg, { type:'error', inModal: Boolean(anchor), anchor });
+
+      if (open === 'request') {
+        setVal('#scheduleOverlay select[name="lab_id"]', url.searchParams.get('lab_id'));
+        setVal('#scheduleOverlay select[name="course_id"]', url.searchParams.get('course_id'));
+        setVal('#scheduleOverlay input[name="student_year_and_section"]', url.searchParams.get('student_year_and_section'));
+        setVal('#scheduleOverlay input[name="date"]', url.searchParams.get('date'));
+        setVal('#scheduleOverlay input[name="start_time"]', url.searchParams.get('start_time'));
+        setVal('#scheduleOverlay input[name="end_time"]', url.searchParams.get('end_time'));
+        setVal('#scheduleOverlay input[name="remarks"]', url.searchParams.get('remarks'));
+      }
+    }
+
+    if (success) showToast(safeDecode(success), { type:'success' });
+    if (info)    showToast(safeDecode(info),    { type:'info' });
+  })();
+
+  // ========= Right-pane weekly preview (AJAX) =========
+  (function () {
+    function shortName(full) {
+      if (!full) return '';
+      const parts = String(full).trim().split(/\s+/);
+      const first = parts[0] || '';
+      const last  = parts[parts.length - 1] || '';
+      const f = first ? (first[0].toUpperCase() + '.') : '';
+      const l = last ? (last[0].toUpperCase() + last.slice(1).toLowerCase()) : '';
+      return (f && l) ? `${f} ${l}` : (l || f || full);
+    }
+
+    function updateLabTitles() {
+      const sel = document.getElementById('modal_lab_select');
+      let text = '—';
+      if (sel && sel.value) {
+        const opt = sel.options[sel.selectedIndex];
+        text = opt ? opt.text : '—';
+      }
+      const formTitle = document.getElementById('labFormTitle');
+      if (formTitle) formTitle.textContent = 'Selected: ' + text;
+      const previewTitle = document.getElementById('labPreviewTitle');
+      if (previewTitle) previewTitle.textContent = text + ' — Preview';
+    }
+    document.getElementById('modal_lab_select')?.addEventListener('change', updateLabTitles);
+    updateLabTitles();
+
+    const BASE_WEEK = "{{ base_week }}";
+
+    async function loadLabPreview(labId, weekMondayStr) {
+      const rangeEl = document.getElementById('labWeekRange');
+      const grid = document.getElementById('labGrid');
+      if (grid) grid.querySelectorAll('td.day-cell').forEach(td=>td.innerHTML="");
+
+      try {
+        const baseUrl = "{% url 'lab_week_data' %}";
+        const url = baseUrl
+          + "?lab_id=" + encodeURIComponent(labId)
+          + "&week=" + encodeURIComponent(weekMondayStr)
+          + "&include_requests=1";
+
+        const res = await fetch(url, { headers: { 'X-Requested-With':'XMLHttpRequest' }});
+        if (!res.ok) throw new Error('Failed to load lab data');
+        const data = await res.json();
+
+        if (rangeEl) rangeEl.textContent = data.week_range || "";
+
+        const entries = data.entries || {};
+        const reqEntries = data.req_entries || {};
+        const timeSlots = data.time_slots || [];
+
+        const DAYS_LIST = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+        DAYS_LIST.forEach(function(day){
+          const td = grid ? grid.querySelector('td.day-cell[data-day="' + day + '"]') : null;
+          if (!td) return;
+
+          timeSlots.forEach(function(t){
+            (entries[day] && entries[day][t] ? entries[day][t] : []).forEach(function(e){
+              const div = document.createElement('div');
+              const dispName = e.teacher_short || shortName(e.teacher || '');
+              const when = e.time_display || e.time || '';
+              div.className = 'entry-block small schedule';
+              div.innerHTML =
+                '<div class="title eb-teacher">' + dispName + '</div>' +
+                (e.course  ? '<div class="meta eb-course">' + e.course  + '</div>' : '') +
+                (e.section ? '<div class="meta eb-course">' + e.section + '</div>' : '') +
+                '<div class="meta eb-time">' + when + '</div>';
+              td.appendChild(div);
+            });
+
+            (reqEntries[day] && reqEntries[day][t] ? reqEntries[day][t] : []).forEach(function(r){
+              const div = document.createElement('div');
+              const when = r.time_display || r.time || '';
+              const byName = r.requested_by_short || shortName(r.requested_by || '');
+              const by = byName ? ' • by ' + byName : '';
+              div.className = 'entry-block small request';
+              div.innerHTML =
+                '<div class="title eb-teacher">Request: ' + (r.status || 'Pending') + '</div>' +
+                (r.course  ? '<div class="meta eb-course">' + r.course  + '</div>' : '') +
+                (r.section ? '<div class="meta eb-course">' + r.section + '</div>' : '') +
+                '<div class="meta eb-time">' + when + by + '</div>';
+              td.appendChild(div);
+            });
+          });
+
+          (reqEntries[day] && reqEntries[day]['—'] ? reqEntries[day]['—'] : []).forEach(function(r){
+            const div = document.createElement('div');
+            const byName = r.requested_by_short || shortName(r.requested_by || '');
+            const by = byName ? 'by ' + byName : '';
+            div.className = 'entry-block small request';
+            div.innerHTML =
+              '<div class="title eb-teacher">Request: ' + (r.status || 'Pending') + '</div>' +
+              (r.section ? '<div class="meta eb-course">' + r.section + '</div>' : '') +
+              '<div class="meta eb-time">' + by + '</div>';
+            td.appendChild(div);
+          });
+        });
+
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    const initialLab = document.getElementById('modal_lab_select')?.value || "{{ selected_lab_id }}";
+    if (initialLab) loadLabPreview(initialLab, BASE_WEEK);
+    document.getElementById('modal_lab_select')?.addEventListener('change', (e)=> {
+      if (e.target.value) loadLabPreview(e.target.value, BASE_WEEK);
+    });
+
+    // ========= Main grid → click: edit own class or request slot =========
+    const selectedLabId = "{{ selected_lab_id }}";
+    const assignedLab   = "{{ assigned_lab|default:'' }}";
+    const myId          = "{{ request.session.user_id }}";
+
+    const labSelect  = document.querySelector('#scheduleOverlay select[name="lab_id"]');
+    const dateInput  = document.querySelector('#scheduleOverlay input[name="date"]');
+    const startInput = document.querySelector('#scheduleOverlay input[name="start_time"]');
+    const endInput   = document.querySelector('#scheduleOverlay input[name="end_time"]');
+
+    const ownRanges = JSON.parse('{{ own_request_ranges_json|escapejs }}');
+
+    function toSec(hms){ if(!hms) return 0; const [h,m,s='0']=hms.split(':').map(n=>parseInt(n,10)||0); return h*3600+m*60+s; }
+    function isOverlap(aStart, aEnd, bStart, bEnd){ return !(aEnd <= bStart || aStart >= bEnd); }
+    function isPastSlot(ymd, hhmm){
+      const now = new Date();
+      const [Y,M,D] = (ymd||'').split('-').map(n=>parseInt(n,10));
+      if (!Y || !M || !D) return false;
+      const [h,m] = (hhmm||'00:00').split(':').map(n=>parseInt(n,10));
+      const slotStart = new Date(Y, M-1, D, h||0, m||0, 0);
+      return slotStart < now;
+    }
+
+    document.querySelectorAll('.weekly-schedule .entry-block').forEach(el => {
+      const kind = (el.dataset.kind || '').toLowerCase();
+      if (!el.classList.contains('active-session') && kind !== 'request') el.classList.add('is-clickable');
+
+      el.addEventListener('click', () => {
+        const kind = (el.dataset.kind || '').toLowerCase();
+        if (kind === 'request') return; // ignore request rows
+
+        const fid   = String(el.dataset.faculty || '');
+        const date  = (el.dataset.date || '');
+        const start = (el.dataset.start || '').slice(0,5);
+        const end   = (el.dataset.end   || '').slice(0,5);
+
+        const scheduleId = el.dataset.scheduleId || '';
+        // If this is YOUR scheduled class → open Edit+Cancel modal
+        // If this is YOUR scheduled class → open Edit+Cancel modal
+        if (scheduleId && fid === String(myId)) {
+          const teacher = el.querySelector('.eb-teacher')?.textContent || '';
+          const course  = el.querySelector('.eb-course')?.textContent || '';
+          const section = el.dataset.section || '';
+          const prettyTime = el.querySelector('.eb-time')?.textContent?.trim()
+                          || ((start && end) ? `${start} - ${end}` : (start || end || '—'));
+
+          // ❗ Do NOT allow cancel if time already past
+          const canCancel = !isPastSlot(date, start);
+
+          openEditModal({
+            teacher: teacher,
+            course: course,
+            section: section,
+            time: prettyTime,
+            schedule_id: scheduleId
+          }, canCancel);
+
+          if (!canCancel) {
+            showToast("This schedule is already in the past. You can no longer cancel the slot.", {
+              type: 'info'
+            });
+          }
+
+          return;
+        }
+
+
+        // Else: treat as a slot to REQUEST, with guards
+        if (el.classList.contains('active-session')) {
+          showToast("You can't request while a session is active in this slot.", { type:'info' });
+          return;
+        }
+        if (assignedLab && String(selectedLabId) === String(assignedLab)) {
+          showToast("You manage this lab. You can’t request it.", { type:'info' });
+          return;
+        }
+        if (isPastSlot(date, start)) {
+          showToast("This slot has already passed.", { type:'info' });
+          return;
+        }
+
+        const slotStartSec = toSec(start + ':00');
+        const slotEndSec   = toSec(end   + ':00');
+
+        const anyPendingOverlap = Array.from(document.querySelectorAll(`.weekly-schedule .entry-block.request[data-date="${date}"]`))
+          .some(reqEl => {
+            const rStart = toSec((reqEl.dataset.start || '00:00:00'));
+            const rEnd   = toSec((reqEl.dataset.end   || '00:00:00'));
+            return isOverlap(slotStartSec, slotEndSec, rStart, rEnd);
+          });
+        if (anyPendingOverlap) {
+          showToast("You can’t request this schedule—it already has a pending request.", { type:'info' });
+          return;
+        }
+
+        const hasOwnOverlap = ownRanges.some(r => {
+          if (r.date !== date) return false;
+          const rStart = toSec(r.start);
+          const rEnd   = toSec(r.end);
+          return isOverlap(slotStartSec, slotEndSec, rStart, rEnd);
+        });
+        if (hasOwnOverlap) {
+          showToast("⚠️ You already requested a slot that overlaps this time.", { type:'info' });
+          return;
+        }
+
+        if (labSelect) labSelect.value = String(selectedLabId);
+        if (dateInput)  dateInput.value  = date;
+        if (startInput) startInput.value = start;
+        if (endInput)   endInput.value   = end;
+
+        openLocal('scheduleOverlay');
+      });
+    });
+  })();
+
+  // ========= Active session polling =========
+  function parseTime(str){const [h,m,s]=(str||"0:0:0").split(":").map(Number);return h*3600+m*60+s;}
+  function jsonOrNull(r){ if(!r.ok) return null; return r.json().catch(()=>null); }
+
+  function fetchActiveSessions(){
+    fetch(`/get-active-sessions/?lab_id={{ selected_lab_id }}`)
+      .then(r=>jsonOrNull(r))
+      .then(data=>{
+        if(!data) return;
+        const blocks=document.querySelectorAll('.entry-block');
+        blocks.forEach(el=>el.classList.remove('active-session'));
+        (data.active_sessions||[]).forEach(s=>{
+          const sDate=s.date,sStart=parseTime(s.start_time),sEnd=parseTime(s.end_time),sFaculty=String(s.faculty_id);
+          blocks.forEach(el=>{
+            const bDate=el.dataset.date,bFaculty=el.dataset.faculty,bStart=parseTime(el.dataset.start),bEnd=parseTime(el.dataset.end);
+            if(sDate===bDate && sFaculty===bFaculty && sEnd>=bStart && sStart<=bEnd){ el.classList.add('active-session'); }
+          });
+        });
+      }).catch(console.error);
+  }
+  fetchActiveSessions();
+  setInterval(fetchActiveSessions, 20000);
+
+  // ===== Right-pane FLIP tab logic =====
+  (function () {
+    const host = document.getElementById('rightPane');
+    if (!host) return;
+
+    const header = host.querySelector('.preview-header');
+    if (header) {
+      const setH = () => {
+        const h = header.offsetHeight || 56;
+        host.style.setProperty('--ph', h + 'px');
+      };
+      setH();
+      requestAnimationFrame(setH);
+
+      if ('ResizeObserver' in window) {
+        const ro = new ResizeObserver(setH);
+        ro.observe(header);
+      } else {
+        window.addEventListener('resize', setH);
+      }
+    }
+
+    const tabs = host.querySelectorAll('.preview-tabs .tab-btn');
+    function activate(btn){
+      tabs.forEach(b=>{
+        const on = (b===btn);
+        b.classList.toggle('active', on);
+        b.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      const target = btn?.dataset?.pane || 'preview';
+      if (target === 'myreq') host.classList.add('show-myreq');
+      else host.classList.remove('show-myreq');
+    }
+    tabs.forEach(b => b.addEventListener('click', ()=>activate(b)));
+    activate(Array.from(tabs).find(b=>b.classList.contains('active')) || tabs[0]);
+  })();
+
+  // ===== Edit modal JS (update + cancel) =====
+  let __editingScheduleId = null;
+  let __cancelScheduleId = null;
+
+  function openEditModal(data, canCancel) {
+    __editingScheduleId = data.schedule_id || null;
+    document.getElementById('roTeacher').textContent = data.teacher || '—';
+    document.getElementById('roCourse').textContent  = data.course  || '—';
+    document.getElementById('roTime').textContent    = data.time    || '—';
+    document.getElementById('editSectionInput').value = data.section || '';
+    document.getElementById('editErr').style.display = 'none';
+
+    const cancelBtn = document.getElementById('cancelSlotBtn');
+    if (cancelBtn) cancelBtn.style.display = canCancel ? 'inline-flex' : 'none';
+
+    document.getElementById('editSectionModal').style.display = 'flex';
+    document.body.classList.add('no-scroll');
+  }
+
+  function closeEditModal() {
+    document.getElementById('editSectionModal').style.display = 'none';
+    document.body.classList.remove('no-scroll');
+    __editingScheduleId = null;
+  }
+
+  function openCancelConfirm() {
+    if (!__editingScheduleId) return;
+    __cancelScheduleId = __editingScheduleId;
+    document.getElementById('cancelConfirmOverlay').style.display = 'flex';
+    document.body.classList.add('no-scroll');
+  }
+
+  function closeCancelConfirm() {
+    document.getElementById('cancelConfirmOverlay').style.display = 'none';
+    document.body.classList.remove('no-scroll');
+    __cancelScheduleId = null;
+  }
+
+  document.getElementById('cancelSlotBtn')?.addEventListener('click', openCancelConfirm);
+  document.getElementById('cancelConfirmOverlay')?.addEventListener('click', (e)=>{
+    if (e.target.id === 'cancelConfirmOverlay') closeCancelConfirm();
+  });
+
+  // Save section
+  document.getElementById('saveSectionBtn')?.addEventListener('click', async () => {
+    const section = document.getElementById('editSectionInput').value.trim();
+    const err = document.getElementById('editErr');
+    if (!section) {
+      err.textContent = 'Section cannot be empty.';
+      err.style.display = 'block';
+      return;
+    }
+    if (!__editingScheduleId) {
+      err.textContent = 'Missing schedule id.';
+      err.style.display = 'block';
+      return;
+    }
+
+    const fd = new FormData();
+    fd.append('schedule_id', __editingScheduleId);
+    fd.append('student_year_and_section', section);
+    fd.append('action', 'update');
+
+    showLoader();
+    try {
+      const res = await fetch("{% url 'update_schedule_section' %}", {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': CSRF,
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: fd
+      });
+      const data = await res.json();
+      console.log('Update debug (availability):', data);
+      if (data.ok || data.success) {
+        showToast('Schedule updated successfully.', { type:'success' });
+        closeEditModal();
+        setTimeout(()=>location.reload(), 600);
+      } else {
+        showToast(data.error || 'Update failed', { type:'error' });
+      }
+    } catch(e) {
+      console.error(e);
+      showToast('Network error while updating.', { type:'error' });
+    } finally {
+      hideLoader();
+    }
+  });
+
+  // Confirm cancel
+  document.getElementById('confirmCancelBtn')?.addEventListener('click', async () => {
+    if (!__cancelScheduleId) return;
+
+    const fd = new FormData();
+    fd.append('schedule_id', __cancelScheduleId);
+    fd.append('action', 'cancel');
+
+    showLoader();
+    try {
+      const res = await fetch("{% url 'update_schedule_section' %}", {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': CSRF,
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: fd
+      });
+      const data = await res.json();
+      console.log('Cancel debug (availability):', data);
+      if (data.ok || data.success || data.cancelled) {
+        showToast('Schedule cancelled.', { type:'success' });
+        closeCancelConfirm();
+        closeEditModal();
+        setTimeout(()=>location.reload(), 600);
+      } else {
+        showToast(data.error || 'Cancel failed', { type:'error' });
+      }
+    } catch (e) {
+      console.error(e);
+      showToast('Network error while cancelling.', { type:'error' });
+    } finally {
+      hideLoader();
+    }
+  });
+
+  // ===== Approve/Reject buttons (reuse CSRF + loader + toast) =====
+  async function approveReservation(btnEl) {
+    const url = btnEl.getAttribute('data-approve-url');
+    showLoader();
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'X-CSRFToken': CSRF,
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      });
+      if (res.ok) {
+        showToast('Request approved successfully', { type: 'success' });
+        setTimeout(() => location.reload(), 600);
+      } else {
+        showToast('Failed to approve request', { type: 'error' });
+      }
+    } catch (e) {
+      console.error(e);
+      showToast('Network error', { type: 'error' });
+    } finally {
+      hideLoader();
+    }
+  }
+
+  async function rejectReservation(btnEl) {
+    const url = btnEl.getAttribute('data-reject-url');
+    showLoader();
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'X-CSRFToken': CSRF,
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      });
+      if (res.ok) {
+        showToast('Request rejected', { type: 'info' });
+        setTimeout(() => location.reload(), 600);
+      } else {
+        showToast('Failed to reject request', { type: 'error' });
+      }
+    } catch (e) {
+      console.error(e);
+      showToast('Network error', { type: 'error' });
+    } finally {
+      hideLoader();
+    }
+  }
+
+  // Expose for inline onclick
+  window.approveReservation = approveReservation;
+  window.rejectReservation = rejectReservation;
+  window.closeEditModal = closeEditModal;
+  window.closeCancelConfirm = closeCancelConfirm;
+</script>
+
+</body>
+</html>

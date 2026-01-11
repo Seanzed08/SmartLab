@@ -1,0 +1,252 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Attendance Records | NEUST</title>
+  <link rel="icon" href="{% static 'img/favicon.ico' %}">
+  <link rel="stylesheet" href="{% static 'css/admin/admin-style.css' %}">
+  <link rel="stylesheet" href="{% static 'css/teacher/attendance-records.css' %}">
+  <style>
+    .filters-bar{display:flex; gap:10px; align-items:end; flex-wrap:wrap; margin:8px 0 14px;}
+    .filters-bar .group{display:flex; flex-direction:column; gap:6px;}
+    .filters-bar label{font-size:12px; font-weight:700; color:#334155;}
+    .filters-bar input, .filters-bar select{padding:8px 10px; border:1px solid #cfd8e3; border-radius:8px; min-width:180px; background:#fff;}
+    .filters-bar .btn{border:none; border-radius:8px; padding:9px 14px; font-weight:700; cursor:pointer;}
+    .filters-bar .apply{background:#002060; color:#fff;}
+    .filters-bar .reset{background:#e2e8f0; color:#0f172a;}
+    .attendance-table tbody tr{ cursor:pointer; }
+
+    .export-controls{margin:12px 0 18px;display:flex;gap:8px;flex-wrap:wrap}
+    .mini-btn{border:none;border-radius:9999px;padding:8px 14px;cursor:pointer;background:#002060;color:#fff;font-size:14px;line-height:1.1}
+    .mini-btn:hover{background:#123b8a;box-shadow:0 2px 8px rgba(2,132,199,.25)}
+    .mini-btn.ghost{background:#eef2ff;color:#111827;border:1px solid #e5e7eb}
+
+    /* Modal (unchanged look) */
+    .overlay{ position:fixed; inset:0; background:rgba(15,23,42,.45); display:none; align-items:center; justify-content:center; z-index:3000; }
+    .overlay.show{ display:flex; }
+    .modal{ background:#fff; width:min(760px, 95vw); border-radius:16px; box-shadow:0 24px 80px rgba(2,8,23,.35); overflow:hidden; }
+    .modal-header{ display:flex; justify-content:space-between; align-items:center; padding:14px 16px; background:#f1f5f9; }
+    .modal-title{ margin:0; font-size:16px; font-weight:800; color:#0f2454; }
+    .modal-body{ padding:16px; max-height:70vh; overflow:auto; }
+    .modal-actions{ display:flex; gap:8px; padding:12px 16px; justify-content:flex-end; background:#fafafa; border-top:1px solid #eef2f7; }
+    .btn.primary{ background:#002060; color:#fff; border:none; border-radius:10px; padding:8px 14px; font-weight:600; cursor:pointer; }
+    .btn.light{ background:#e2e8f0; color:#0f172a; border:none; border-radius:10px; padding:8px 14px; font-weight:600; cursor:pointer; }
+    .kv{ display:grid; grid-template-columns:160px 1fr; gap:8px 14px; margin-bottom:12px; }
+    .kv .k{ font-weight:700; color:#334155; }
+    .list{ margin:8px 0 0 0; padding-left:18px; }
+    .badge{display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; background:#eef2ff; color:#1e3a8a;}
+  </style>
+</head>
+<body class="teacher-page">
+<div class="dashboard-container">
+  {% include 'includes/teacher_sidebar.html' %}
+  <div class="main-panel">
+    {% include 'includes/teacher_header.html' %}
+
+    <section class="content-area">
+      <h2>Attendance Records</h2>
+      <!-- Filters: date_from (optional), date_to (optional), lab -->
+      <form class="filters-bar" method="get">
+        <div class="group">
+          <label for="date_from">From</label>
+          <input type="date" id="date_from" name="date_from" value="{{ f_date_from|default:'' }}">
+        </div>
+        <div class="group">
+          <label for="date_to">To</label>
+          <input type="date" id="date_to" name="date_to" value="{{ f_date_to|default:'' }}">
+        </div>
+        <div class="group">
+          <label for="lab_id">Laboratory</label>
+          <select id="lab_id" name="lab_id">
+            <option value="">All labs</option>
+            {% for lab in labs %}
+              <option value="{{ lab.id }}" {% if f_lab_id and f_lab_id|stringformat:'s' == lab.id|stringformat:'s' %}selected{% endif %}>
+                Lab {{ lab.num }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="group" style="flex-direction:row; gap:8px;">
+          <button type="submit" class="btn apply">Apply</button>
+          <a href="{% url 'attendance_records' %}" class="btn reset">Reset</a>
+        </div>
+      </form>
+
+      <!-- Export / Print controls -->
+      <div class="export-controls">
+        <!-- PRINT (merged, one PDF) -->
+        <form method="get" action="{% url 'teacher_print_queue' %}" target="_blank">
+          <input type="hidden" name="type" value="both">
+          <input type="hidden" name="date_from" value="{{ f_date_from|default:'' }}">
+          <input type="hidden" name="date_to" value="{{ f_date_to|default:'' }}">
+          <input type="hidden" name="lab_id" value="{{ f_lab_id|default:'' }}">
+          <button type="submit" class="mini-btn">🖨 Print (All)</button>
+        </form>
+        <form method="get" action="{% url 'teacher_print_queue' %}" target="_blank">
+          <input type="hidden" name="type" value="utilization">
+          <input type="hidden" name="date_from" value="{{ f_date_from|default:'' }}">
+          <input type="hidden" name="date_to" value="{{ f_date_to|default:'' }}">
+          <input type="hidden" name="lab_id" value="{{ f_lab_id|default:'' }}">
+          <button type="submit" class="mini-btn ghost">🖨 Print Utilization</button>
+        </form>
+        <form method="get" action="{% url 'teacher_print_queue' %}" target="_blank">
+          <input type="hidden" name="type" value="attendance">
+          <input type="hidden" name="date_from" value="{{ f_date_from|default:'' }}">
+          <input type="hidden" name="date_to" value="{{ f_date_to|default:'' }}">
+          <input type="hidden" name="lab_id" value="{{ f_lab_id|default:'' }}">
+          <button type="submit" class="mini-btn ghost">🖨 Print Attendance</button>
+        </form>
+
+        <!-- DOWNLOAD merged single PDF (not ZIP) -->
+        <form method="get" action="{% url 'teacher_export_merged_pdf' %}">
+          <input type="hidden" name="type" value="both">
+          <input type="hidden" name="date_from" value="{{ f_date_from|default:'' }}">
+          <input type="hidden" name="date_to" value="{{ f_date_to|default:'' }}">
+          <input type="hidden" name="lab_id" value="{{ f_lab_id|default:'' }}">
+          <button type="submit" class="mini-btn">📄 Download PDF (All)</button>
+        </form>
+        <form method="get" action="{% url 'teacher_export_merged_pdf' %}">
+          <input type="hidden" name="type" value="utilization">
+          <input type="hidden" name="date_from" value="{{ f_date_from|default:'' }}">
+          <input type="hidden" name="date_to" value="{{ f_date_to|default:'' }}">
+          <input type="hidden" name="lab_id" value="{{ f_lab_id|default:'' }}">
+          <button type="submit" class="mini-btn ghost">📄 Download PDF (Utilization)</button>
+        </form>
+        <form method="get" action="{% url 'teacher_export_merged_pdf' %}">
+          <input type="hidden" name="type" value="attendance">
+          <input type="hidden" name="date_from" value="{{ f_date_from|default:'' }}">
+          <input type="hidden" name="date_to" value="{{ f_date_to|default:'' }}">
+          <input type="hidden" name="lab_id" value="{{ f_lab_id|default:'' }}">
+          <button type="submit" class="mini-btn ghost">📄 Download PDF (Attendance)</button>
+        </form>
+
+
+      </div>
+
+      <div class="table-wrapper">
+        <table class="attendance-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Laboratory</th>
+              <th>Course</th>
+              <th>Section</th>
+              <th>Time</th>
+              <th>Students</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% if attendance_records %}
+            {% for record in attendance_records %}
+              <tr data-preview-url="{% url 'attendance_record_preview' record.utilization_id %}">
+                <td>{{ record.date }}</td>
+                <td>{{ record.lab }}</td>
+                <td>{{ record.course }}</td>
+                <td>{{ record.section }}</td>
+                <td>{{ record.time_duration }}</td>
+                <td><span class="badge">{{ record.student_count }}</span></td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr><td colspan="6" style="text-align:center;">No completed records found.</td></tr>
+          {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- Preview Modal -->
+<div id="previewOverlay" class="overlay" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="previewTitle">
+    <div class="modal-header">
+      <h3 id="previewTitle" class="modal-title">Attendance Preview</h3>
+      <button class="btn light" onclick="closePreview()">Close</button>
+    </div>
+    <div class="modal-body">
+      <div class="kv">
+        <div class="k">Date</div><div id="pv-date">—</div>
+        <div class="k">Time</div><div id="pv-time">—</div>
+        <div class="k">Laboratory</div><div id="pv-lab">—</div>
+        <div class="k">Instructor</div><div id="pv-teacher">—</div>
+        <div class="k">Course</div><div id="pv-course">—</div>
+        <div class="k">Section</div><div id="pv-section">—</div>
+        <div class="k">Semester</div><div id="pv-sem">—</div>
+        <div class="k">Processed By</div><div id="pv-processed">—</div>
+        <div class="k">Remarks</div><div id="pv-remarks">—</div>
+        <div class="k">Students Present</div><div id="pv-count">0</div>
+      </div>
+      <div>
+        <strong>Students</strong>
+        <ol id="pv-students" class="list"></ol>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <a id="pv-slip" href="#" target="_blank" class="btn light">Slip</a>
+      <a id="pv-attendance" href="#" target="_blank" class="btn light">Attendance</a>
+      <a id="pv-print" href="#" target="_blank" class="btn primary">Print</a>
+    </div>
+  </div>
+</div>
+
+<script>
+  const overlay = document.getElementById('previewOverlay');
+  const studentsOl = document.getElementById('pv-students');
+
+  function openPreview(){ overlay.classList.add('show'); overlay.setAttribute('aria-hidden','false'); }
+  function closePreview(){ overlay.classList.remove('show'); overlay.setAttribute('aria-hidden','true'); }
+
+  function fillPreview(data){
+    document.getElementById('pv-date').textContent = data.date || '—';
+    document.getElementById('pv-time').textContent = data.time || '—';
+    document.getElementById('pv-lab').textContent = data.lab_num ?? '—';
+    document.getElementById('pv-teacher').textContent = data.teacher_name || '—';
+    document.getElementById('pv-course').textContent = data.course_code || '—';
+    document.getElementById('pv-section').textContent = data.section || '—';
+    document.getElementById('pv-sem').textContent = data.semester_ay || '—';
+    document.getElementById('pv-processed').textContent = data.processed_by || '—';
+    document.getElementById('pv-remarks').textContent = data.remarks || 'N/A';
+    document.getElementById('pv-count').textContent = data.student_count ?? 0;
+
+    studentsOl.innerHTML = '';
+    (data.students || []).forEach((name) => {
+      const li = document.createElement('li');
+      li.textContent = name;
+      studentsOl.appendChild(li);
+    });
+
+    // Combined print page
+    document.getElementById('pv-print').href = data.print_url || '#';
+
+    // Build SSRS links using placeholder replacement like in admin
+    const slipBase = "{% url 'teacher_print_utilization_slip' 0 %}";
+    const attBase  = "{% url 'teacher_print_attendance_sheet' 0 %}";
+    if (data.utilization_id){
+      document.getElementById('pv-slip').href = slipBase.replace('/0/', `/${data.utilization_id}/`);
+      document.getElementById('pv-attendance').href = attBase.replace('/0/', `/${data.utilization_id}/`);
+    } else {
+      document.getElementById('pv-slip').href = '#';
+      document.getElementById('pv-attendance').href = '#';
+    }
+  }
+
+  document.querySelectorAll('.attendance-table tbody tr[data-preview-url]').forEach(tr => {
+    tr.addEventListener('click', () => {
+      const url = tr.getAttribute('data-preview-url');
+      fetch(url, { headers: {"X-Requested-With":"XMLHttpRequest"} })
+        .then(r => r.json())
+        .then(data => {
+          if (data.error) { alert(data.error); return; }
+          fillPreview(data);
+          openPreview();
+        })
+        .catch(() => alert("Failed to load preview."));
+    });
+  });
+
+  overlay.addEventListener('click', (e) => { if(e.target === overlay){ closePreview(); } });
+</script>
+</body>
+</html>

@@ -1,0 +1,93 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Teacher Dashboard</title>
+  <link rel="stylesheet" href="{% static 'css/teacher/teacher-dashboard.css' %}">
+  <link rel="stylesheet" href="{% static 'css/admin/admin-style.css' %}">
+</head>
+<body>
+<div class="dashboard-container">
+  {% include 'includes/teacher_sidebar.html' %}
+  <div class="main-panel">
+    {% include 'includes/teacher_header.html' %}
+
+    <section class="content-area">
+      <div id="session-info"></div>
+
+      {% if assigned_lab %}
+        {# you can surface quick actions for the assigned lab here if you want #}
+      {% else %}
+        {# no assigned lab; header component already communicates that generally #}
+      {% endif %}
+    </section>
+  </div>
+</div>
+
+<script>
+  async function fetchDashboardData() {
+    const sessionDiv = document.getElementById("session-info");
+
+    try {
+      const res = await fetch("{% url 'teacher_dashboard_data' %}", { cache: "no-store" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      const data = await res.json();
+      const session = data?.active_session || null;
+      const students = Array.isArray(data?.students) ? data.students : [];
+
+      if (session) {
+        const rows = students.length
+          ? students.map(s => `
+              <tr>
+                <td>${s.name}</td>
+                <td>${s.time_in || "—"}</td>
+                <td>${s.time_out || "—"}</td>
+              </tr>
+            `).join("")
+          : '<tr><td colspan="3">No taps yet.</td></tr>';
+
+        sessionDiv.innerHTML = `
+          <div class="card success-card">
+            <h3>🔓 Active Lab Session</h3>
+            <p><strong>Teacher:</strong> ${session.teacher}</p>
+            <p><strong>Lab:</strong> ${session.lab}</p>
+            <p><strong>Course:</strong> ${session.course || '—'}</p>
+            <p><strong>Section:</strong> ${session.section || '—'}</p>
+            <p><strong>Time:</strong> ${session.start} – ${session.end}</p>
+            <p><strong>Remarks:</strong> ${session.remarks || 'None'}</p>
+            <p><strong>Semester:</strong> ${session.semester || '—'}</p>
+            <p class="status">Status: <span class="active">IN SESSION</span></p>
+            <hr>
+            <h4>👨‍🎓 Students Checked-In (${students.length})</h4>
+            <table class="student-table">
+              <thead><tr><th>Name</th><th>Time In</th><th>Time Out</th></tr></thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>
+        `;
+      } else {
+        sessionDiv.innerHTML = `
+          <div class="card warning-card">
+            <h3>🔒 No Active Session</h3>
+            <p>You have no active lab session at the moment.</p>
+          </div>
+        `;
+      }
+    } catch (err) {
+      sessionDiv.innerHTML = `
+        <div class="card warning-card">
+          <h3>⚠️ Dashboard Error</h3>
+          <p>Couldn’t load session data (${err.message}).</p>
+        </div>
+      `;
+    }
+  }
+
+  // live refresh
+  setInterval(fetchDashboardData, 5000);
+  window.addEventListener('DOMContentLoaded', fetchDashboardData);
+</script>
+</body>
+</html>

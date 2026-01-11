@@ -1,0 +1,314 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Print Combined Slip</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 5mm;
+    }
+
+    @media print {
+      html, body {
+        width: 205mm;
+        height: 297mm;
+        margin: 0;
+        padding: 0;
+      }
+      table, tr {
+        page-break-inside: avoid;
+      }
+      thead {
+        display: table-header-group;
+      }
+      body::before, body::after {
+        display: none;
+      }
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 13px;
+      margin: 3mm 15mm 15mm 8mm;
+      color: #000;
+    }
+
+    .lus-header-table, .att-header-table {
+      width: 100%;
+      margin-bottom: 5px;
+    }
+    .lus-header-table td, .att-header-table td {
+      border: none;
+      vertical-align: top;
+    }
+    .lus-logo-cell, .att-logo-cell {
+      width: 70px;
+      padding-right: 10px;
+    }
+    .lus-title-cell, .att-title-cell {
+      text-align: left;
+      padding-top: 0;
+    }
+    .lus-form-row, .att-form-row {
+      margin-bottom: 10px;
+    }
+    .lus-label, .att-label {
+      display: inline-block;
+      min-width: 190px;
+      font-weight: bold;
+    }
+    .lus-input-line, .att-input-line {
+      display: inline-block;
+      border-bottom: 1px solid #000;
+      width: 70%;
+      height: 16px;
+      vertical-align: bottom;
+      padding-left: 5px;
+    }
+    .lus-top-row, .att-top-row {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+      margin-bottom: 20px;
+    }
+    .lus-top-row .lus-input-line, .att-top-row .att-input-line {
+      width: 120px;
+    }
+    .lus-remarks {
+      margin-top: 20px;
+      margin-bottom: 10px;
+    }
+    .lus-remarks-line {
+      border-bottom: 1px solid #000;
+      height: 20px;
+      margin-bottom: 2px;
+      padding-left: 5px;
+    }
+    .lus-approval-table, .att-approval-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      margin-top: 20px;
+    }
+    .lus-approval-table th, .lus-approval-table td, .att-approval-table th, .att-approval-table td {
+      border: 1px solid #000;
+      padding: 6px;
+      text-align: center;
+    }
+    .lus-footer, .att-footer {
+      font-size: 11px;
+      margin-top: 30px;
+    }
+    .att-line, .line { display: inline-block; border-bottom: 1px solid #000; vertical-align: text-bottom; }
+    .att-line.short, .line.short { width: 100px; }
+    .att-line.medium, .line.medium { width: 200px; }
+    .att-line.long, .line.long { width: 350px; }
+    .att-table, .attendance-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 9pt;
+      margin-top: 10px;
+    }
+    .att-table th, .att-table td, .attendance-table th, .attendance-table td {
+      border: 1px solid #000;
+      padding: 1.5px;
+    }
+    .att-table th, .attendance-table th {
+      text-align: center;
+    }
+    .att-table td.num, .attendance-table td.num { width: 10%; text-align: center; }
+    .att-table td.name, .attendance-table td.name { width: 70%; text-align: left; }
+    .att-table td.sign, .attendance-table td.sign { width: 20%; text-align: center; }
+  </style>
+</head>
+<body>  
+<!-- UTILIZATION SLIP -->
+<table class="lus-header-table" style="text-align: center;">
+  <tr>
+    <td>
+      <div style="display: flex; align-items: center; justify-content: center;">
+        <img src="{% static 'img/neust-logo.png' %}" alt="NEUST Logo" style="width: 60px; margin-right: 10px;">
+        <div>
+          <p style="margin: 0; font-size: 10pt;">Republic of the Philippines</p>
+          <p style="margin: 0; font-weight: bold; font-size: 11pt;">NUEVA ECIJA UNIVERSITY OF SCIENCE AND TECHNOLOGY<br><span style="font-weight:normal; font-size: 10pt;">Nueva Ecija, Philippines</span></p>
+          <h3 style="margin: 5px 0;"><strong>CLASS LABORATORY UTILIZATION SLIP</strong></h3>
+        </div>
+      </div>
+    </td>
+  </tr>
+</table>
+
+
+<div class="lus-top-row">
+  <div><strong>LUS No:</strong> <span class="lus-input-line">{{ utilization_id }}</span></div>
+  <div><strong>Date:</strong> <span class="lus-input-line">{{ date }}</span></div>
+</div>
+
+<div class="lus-form-row"><span class="lus-label">Name of Instructor</span>: <span class="lus-input-line">{{ teacher_name }}</span></div>
+<div class="lus-form-row"><span class="lus-label">Subject</span>: <span class="lus-input-line">{{ course_code }}</span></div>
+<div class="lus-form-row"><span class="lus-label"><em>Student Year and Section</em></span>: <span class="lus-input-line">{{ section }}</span></div>
+<div class="lus-form-row"><span class="lus-label">Number of Students</span>: <span class="lus-input-line">{{ students_present }}</span></div>
+<div class="lus-form-row"><span class="lus-label">Laboratory Number</span>: <span class="lus-input-line">{{ lab_num }}</span></div>
+<div class="lus-form-row"><span class="lus-label">Time Duration</span>: <span class="lus-input-line">{{ time_duration }}</span></div>
+
+<div class="lus-remarks"><strong>Remarks:</strong></div>
+<div class="lus-remarks-line">{{ remarks }}</div>
+<div class="lus-remarks-line">{{ remarks_line2 }}</div>
+<div class="lus-remarks-line">{{ remarks_line3 }}</div>
+<div class="lus-remarks-line">{{ remarks_line4 }}</div>
+<div class="lus-remarks-line">{{ remarks_line5 }}</div>
+
+<table class="lus-approval-table">
+  <tr>
+    <th>Action</th>
+    <th>Name</th>
+    <th>Designation</th>
+    <th>Signature</th>
+    <th>Date</th>
+  </tr>
+  <tr>
+    <td>Requested</td>
+    <td>{{ teacher_name }}</td>
+    <td>Instructor</td>
+    <td></td>
+    <td>{{ date }}</td>
+  </tr>
+  <tr>
+    <td>Processed</td>
+    <td>{{ processed_by }}</td>
+    <td>Approver</td>
+    <td></td>
+    <td>{{ processed_date }}</td>
+  </tr>
+</table>
+
+<p class="lus-footer">NEUST-MIS-F013<br>Rev.0009.7.2020</p>
+
+<div style="page-break-after: always;"></div>
+<table class="att-header-table" style="text-align: center;">
+  <tr>
+    <td>
+      <div style="display: flex; align-items: center; justify-content: center;">
+        <img src="{% static 'img/neust-logo.png' %}" alt="NEUST Logo" style="width:60px; height:auto; margin-right: 10px;">
+        <div>
+          <div style="font-weight:bold; font-size:10.5pt;">
+            Republic of the Philippines<br>
+            NUEVA ECIJA UNIVERSITY OF SCIENCE AND TECHNOLOGY
+          </div>
+          <div style="font-weight:bold; font-size:11.5pt; margin-top:3px;">
+            COMPUTER LABORATORY ATTENDANCE SHEET <span style="font-weight:normal;">(FORM 1)</span>
+          </div>
+          <div style="font-style: italic; font-size:9.5pt;">
+            (FOR REGULAR CLASSES)
+          </div>
+        </div>
+      </div>
+    </td>
+  </tr>
+</table>
+
+
+<table style="width:100%; margin-bottom: 7px;">
+  <tr>
+    <td colspan="2">
+      Semester &amp; Academic Year :
+      <span class="line medium">{% if semester_ay %}{{ semester_ay }}{% else %}&nbsp;{% endif %}</span>
+    </td>
+    <td style="text-align:left;">
+      Date:
+      <span class="line medium">{% if request_date %}{{ request_date }}{% else %}&nbsp;{% endif %}</span>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="3">
+      Name of Instructor&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:
+      <span class="line medium">{% if instructor_name %}{{ instructor_name }}{% else %}&nbsp;{% endif %}</span>
+      Signature:<span class="line short">&nbsp;</span>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="3">
+      Course&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:
+      <span class="line long">{% if course_name %}{{ course_name }}{% else %}&nbsp;{% endif %}</span>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="3">
+      Year and Section&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:
+      <span class="line long">{% if year_section %}{{ year_section }}{% else %}&nbsp;{% endif %}</span>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="3">
+      Laboratory Room Number&nbsp;&nbsp;&nbsp;:
+      <span class="line long">{% if room_number %}{{ room_number }}{% else %}&nbsp;{% endif %}</span>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="3">
+      Date and Time&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:
+      <span class="line long">{% if date_time %}{{ date_time }}{% else %}&nbsp;{% endif %}</span>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="3">
+      Laboratory Assistant&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:
+      <span class="line medium">&nbsp;</span>
+      Signature:<span class="line short">&nbsp;</span>
+    </td>
+  </tr>
+</table>
+
+<table class="att-table">
+  <thead>
+    <tr>
+      <th>Computer No.</th>
+      <th>Name of Student</th>
+      <th>Signature</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for i in range %}
+    <tr>
+      <td class="num">{{ i }}</td>
+      <td class="name">{% if students|length >= i %}{{ students|slice:i|last }}{% else %}&nbsp;{% endif %}</td>
+      <td class="sign"></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<table class="att-approval-table" style="margin-top:8px;">
+  <thead>
+    <tr>
+      <th>Action</th>
+      <th>Name</th>
+      <th>Designation</th>
+      <th>Signature</th>
+      <th>Date</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Requested</td>
+      <td>{{ instructor_name }}</td>
+      <td>Instructor</td>
+      <td></td>
+      <td>{{ request_date }}</td>
+    </tr>
+    <tr>
+      <td>Processed</td>
+      <td>{{ lab_assistant_name }}</td>
+      <td>Lab Assistant</td>
+      <td></td>
+      <td>{{ request_date }}</td>
+    </tr>
+  </tbody>
+</table>
+
+<p class="att-footer">NEUST-MIS-F018<br>Rev. 00 (09.18.2024)</p>
+
+</body>
+</html>

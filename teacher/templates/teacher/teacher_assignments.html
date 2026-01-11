@@ -1,0 +1,383 @@
+{# templates/teacher/teacher_assignments.html #}
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>My Assignments | NEUST</title>
+  <link rel="stylesheet" href="{% static 'css/admin/admin-style.css' %}">
+  <link rel="stylesheet" href="{% static 'css/teacher/assignments.css' %}">
+  <style>
+    /* optional UX: visually hint disabled */
+    select:disabled { background:#f7f7f7; cursor:not-allowed; }
+  </style>
+</head>
+<body class="teacher-page">
+<div class="dashboard-container">
+  {% include 'includes/teacher_sidebar.html' %}
+
+  <div class="main-panel">
+    {% include 'includes/teacher_header.html' %}
+
+    <section class="content-area">
+      <h2>Assignments</h2>
+
+      <div class="toast-wrap" aria-live="polite" aria-atomic="true"></div>
+
+      {% if messages %}
+      <div id="dj-toasts" style="display:none;">
+        {% for m in messages %}
+          <div class="dj-msg"
+               data-type="{{ m.tags|default_if_none:'info' }}"
+               data-text="{{ m|escape }}">
+          </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if assigned_map_json %}
+        <div id="assigned-map" data-json="{{ assigned_map_json|escape }}" style="display:none;"></div>
+      {% endif %}
+
+      <div class="panel">
+        <div class="panel-header">
+          <h3>Current Course Assignments</h3>
+          <div class="header-actions">
+            <button type="button" class="btn btn-add" data-open="#addAssignmentModal">
+              + Assign Course
+            </button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          {% if assignments %}
+            <table class="table assignments-table">
+              <thead>
+                <tr>
+                  <th>Course</th>
+                  <th>Semester</th>
+                  <th class="nowrap">Dates</th>
+                  <th class="nowrap"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for a in assignments %}
+                  <tr>
+                    <td class="ellipsis"><strong>{{ a.course_code }}</strong> — {{ a.course_name }}</td>
+                    <td class="nowrap">{{ a.term }} <span class="view-badge">A.Y. {{ a.school_year }}</span></td>
+                    <td class="nowrap">{{ a.start_date }} to {{ a.end_date }}</td>
+                    <td class="actions">
+                      <button
+                        type="button"
+                        class="btn btn-delete"
+                        data-open="#confirmUnassignModal"
+                        data-action="{% url 'unassign_assignment' a.assigned_teacher_id %}"
+                        data-label="{{ a.course_code }} — {{ a.course_name }}">
+                        Unassign
+                      </button>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          {% else %}
+            <div style="padding:16px;">
+              <p class="muted">No assignments yet. Click <em>+ Assign Course</em> to add one.</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- Add Assignment Modal -->
+<div class="modal" id="addAssignmentModal" aria-hidden="true">
+  <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="addAssignTitle">
+    <button class="modal-close" type="button" aria-label="Close" data-close>&times;</button>
+    <h3 id="addAssignTitle">Assign Course</h3>
+
+    <form method="post" action="{% url 'create_assignment' %}">
+      {% csrf_token %}
+
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label for="program_id">Program</label>
+          <select id="program_id" name="program_id">
+            <option value="">All programs…</option>
+            {% for p in programs %}
+              <option value="{{ p.program_id }}">{{ p.program_code }} — {{ p.program_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="semester_id">Semester <span class="muted small">(active only)</span></label>
+          <select id="semester_id" name="semester_id" required>
+            <option value="">Select semester…</option>
+            {% for s in semesters %}
+              <option value="{{ s.semester_id }}">{{ s.label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="course_id">Course</label>
+          <select id="course_id" name="course_id" required disabled>
+            <option value="">Select course…</option>
+            {% for c in courses %}
+              <option value="{{ c.course_id }}" data-program="{{ c.program_id|default_if_none:'' }}">{{ c.label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-clear" data-close>Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Assignment</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Confirm Unassign Modal -->
+<div class="modal" id="confirmUnassignModal" aria-hidden="true">
+  <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+    <button class="modal-close" type="button" aria-label="Close" data-close>&times;</button>
+    <h3 id="confirmTitle">Unassign Course</h3>
+    <p>
+      Are you sure you want to unassign <strong id="confirmCourseLabel">this course</strong>?
+    </p>
+    <p class="muted small">
+      Note: You can’t unassign while a session is currently in progress.
+      If allowed, all <em>future</em> schedules and slips for this assignment will be cancelled automatically.
+    </p>
+
+    <form id="unassignForm" method="post" action="#">
+      {% csrf_token %}
+      <div class="modal-actions">
+        <button type="button" class="btn btn-clear" data-close>Cancel</button>
+        <button type="submit" class="btn btn-delete">Yes, Unassign</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  (function () {
+    var openers = document.querySelectorAll("[data-open]");
+    var closeSel = "[data-close]";
+    var body = document.body;
+
+    function openModal(el) {
+      var modal = typeof el === "string" ? document.querySelector(el) : el;
+      if (!modal) return;
+      modal.classList.add("show");
+      modal.removeAttribute("aria-hidden");
+      body.style.overflow = "hidden";
+      var focusTarget = modal.querySelector("button, [href], input, select, textarea");
+      if (focusTarget) focusTarget.focus();
+    }
+
+    function closeModal(modal) {
+      modal.classList.remove("show");
+      modal.setAttribute("aria-hidden", "true");
+      body.style.overflow = "";
+    }
+
+    for (var i = 0; i < openers.length; i++) {
+      openers[i].addEventListener("click", function () {
+        var target = this.getAttribute("data-open");
+        if (target === "#confirmUnassignModal") {
+          var action = this.getAttribute("data-action");
+          var label = this.getAttribute("data-label") || "this course";
+          var form  = document.getElementById("unassignForm");
+          var labelEl = document.getElementById("confirmCourseLabel");
+          if (form && action) form.setAttribute("action", action);
+          if (labelEl) labelEl.textContent = label;
+        }
+        openModal(target);
+      });
+    }
+
+    var modals = document.querySelectorAll(".modal");
+    for (var j = 0; j < modals.length; j++) {
+      modals[j].addEventListener("click", function (e) {
+        if (e.target.matches(closeSel) || (e.target.closest && e.target.closest(closeSel))) {
+          closeModal(this);
+        }
+      });
+    }
+
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") {
+        var openList = document.querySelectorAll(".modal.show");
+        for (var k = 0; k < openList.length; k++) {
+          closeModal(openList[k]);
+        }
+      }
+    });
+
+    // ------------------- filtering logic -------------------
+
+    var programSelect  = document.getElementById('program_id');
+    var courseSelect   = document.getElementById('course_id');
+    var semesterSelect = document.getElementById('semester_id');
+
+    // capture all courses
+    var courseOptions = [];
+    if (courseSelect) {
+      var opts = courseSelect.options;
+      for (var c = 0; c < opts.length; c++) {
+        var opt = opts[c];
+        if (opt.value !== '') {
+          courseOptions.push({
+            value: opt.value,
+            label: opt.textContent,
+            program: opt.getAttribute('data-program') || ''
+          });
+        }
+      }
+    }
+
+    // parsed assigned map
+    var assignedMap = {};
+    var assignedEl = document.getElementById('assigned-map');
+    if (assignedEl) {
+      try {
+        var raw = assignedEl.getAttribute('data-json') || '{}';
+        assignedMap = JSON.parse(raw);
+      } catch (e) { assignedMap = {}; }
+    }
+
+    function rebuildCourseOptions(selectedProgram, selectedSemester) {
+      if (!courseSelect) return;
+      var currentVal = courseSelect.value;
+
+      // exclusion for selected semester
+      var exclude = {};
+      if (selectedSemester && assignedMap[selectedSemester]) {
+        var arr = assignedMap[selectedSemester];
+        for (var i = 0; i < arr.length; i++) exclude[String(arr[i])] = true;
+      }
+
+      courseSelect.innerHTML = '<option value="">Select course…</option>';
+
+      for (var x = 0; x < courseOptions.length; x++) {
+        var o = courseOptions[x];
+
+        // program filter
+        if (selectedProgram && String(o.program) !== String(selectedProgram)) continue;
+
+        // exclude if already assigned in this semester by this teacher
+        if (selectedSemester && exclude[String(o.value)]) continue;
+
+        var newOpt = document.createElement('option');
+        newOpt.value = o.value;
+        newOpt.textContent = o.label;
+        newOpt.setAttribute('data-program', o.program);
+        courseSelect.appendChild(newOpt);
+      }
+
+      // keep selection if still valid
+      var stillThere = false;
+      var opts2 = courseSelect.options;
+      for (var y = 0; y < opts2.length; y++) {
+        if (opts2[y].value === currentVal) { stillThere = true; break; }
+      }
+      courseSelect.value = stillThere ? currentVal : '';
+    }
+
+    function refreshCourses() {
+      var sp = programSelect  ? programSelect.value  : '';
+      var ss = semesterSelect ? semesterSelect.value : '';
+      rebuildCourseOptions(sp, ss);
+      // only allow selection when a semester is chosen
+      if (courseSelect) courseSelect.disabled = !ss;
+    }
+
+    if (programSelect)  programSelect.addEventListener('change', refreshCourses);
+    if (semesterSelect) semesterSelect.addEventListener('change', refreshCourses);
+
+    // When opening the Add Assignment modal:
+    // - clear program
+    // - if there is exactly 1 active semester, auto-select it
+    // - rebuild & enable the course list (filtered)
+    var addBtns = document.querySelectorAll('[data-open="#addAssignmentModal"]');
+    for (var z = 0; z < addBtns.length; z++) {
+      addBtns[z].addEventListener('click', function () {
+        if (programSelect)  programSelect.value  = '';
+
+        // auto-select the only active semester, if exactly one
+        var ss = semesterSelect;
+        if (ss) {
+          // count real options (exclude placeholder)
+          var count = 0, onlyVal = '';
+          for (var i=0;i<ss.options.length;i++){
+            if (ss.options[i].value !== '') { count++; onlyVal = ss.options[i].value; }
+          }
+          if (count === 1) {
+            ss.value = onlyVal;
+          } else {
+            ss.value = '';
+          }
+        }
+
+        refreshCourses();
+      });
+    }
+
+    // ---- TOASTS ----
+    var toastWrap = document.querySelector('.toast-wrap');
+    function showToast(cfg) {
+      cfg = cfg || {};
+      var type = cfg.type || 'info';
+      var title = cfg.title || '';
+      var message = cfg.message || '';
+      var timeout = typeof cfg.timeout === 'number' ? cfg.timeout : 3500;
+
+      var toast = document.createElement('div');
+      toast.className = 'toast ' + type;
+      toast.setAttribute('role', 'status');
+      toast.innerHTML =
+        '<div class="t-icon" aria-hidden="true"></div>' +
+        '<div class="t-body">' +
+          (title ? '<div class="t-title">' + title + '</div>' : '') +
+          '<div class="t-msg">' + message + '</div>' +
+        '</div>' +
+        '<button class="t-close" aria-label="Close">&times;</button>';
+
+      toastWrap.appendChild(toast);
+      void toast.offsetWidth;
+      toast.classList.add('show');
+
+      function remove() {
+        toast.classList.remove('show');
+        setTimeout(function () { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 180);
+      }
+
+      var timer = setTimeout(remove, timeout);
+      toast.addEventListener('mouseenter', function () { clearTimeout(timer); });
+      toast.addEventListener('mouseleave', function () { timer = setTimeout(remove, 1000); });
+      var closeBtn = toast.querySelector('.t-close');
+      if (closeBtn) closeBtn.addEventListener('click', remove);
+    }
+
+    var msgRoot = document.getElementById('dj-toasts');
+    if (msgRoot) {
+      var nodes = msgRoot.querySelectorAll('.dj-msg');
+      for (var m = 0; m < nodes.length; m++) {
+        var tag = nodes[m].getAttribute('data-type') || 'info';
+        var type =
+          tag.indexOf('error') > -1 ? 'error' :
+          (tag.indexOf('success') > -1 ? 'success' :
+          (tag.indexOf('warning') > -1 ? 'warning' : 'info'));
+        var msg = nodes[m].getAttribute('data-text') || '';
+        showToast({ type: type, title: '', message: msg, timeout: 4200 });
+      }
+      if (msgRoot.parentNode) msgRoot.parentNode.removeChild(msgRoot);
+    }
+  })();
+</script>
+</body>
+</html>

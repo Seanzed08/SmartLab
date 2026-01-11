@@ -1,0 +1,1507 @@
+{% load static %}
+{% load custom_filters %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>My Schedule | NEUST</title>
+  <link rel="stylesheet" href="{% static 'css/admin/admin-style.css' %}">
+  <link rel="stylesheet" href="{% static 'css/teacher/schedule.css' %}">
+  <style>
+    /* ===============================
+       Base layout (content-area scope) — COMPACT
+       =============================== */
+    .content-area{
+      position:relative;
+      padding:20px;
+      font-family:Arial,sans-serif;
+      background:#f9f9f9;
+      color:#2c3e50;
+    }
+
+    .card{
+      background:#fff;
+      border:1px solid #e5e7eb;
+      border-radius:12px;
+      box-shadow:0 1px 3px rgba(0,0,0,.04);
+    }
+
+    .muted{
+      font-size:12px;
+      color:#64748b;
+    }
+
+    .teacher-page h2{
+      margin:6px 0 10px;
+      font-size:22px;
+      font-weight:800;
+      color:#0f2454;
+    }
+
+    /* Header & buttons */
+    .schedule-header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:12px;
+    }
+    .weekly-title{margin:0;}
+    .schedule-toolbar{display:flex;gap:8px;}
+
+    .week-navigation{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      margin:4px 0 10px;
+    }
+    .week-range{
+      margin:0;
+      font-size:16px;
+      color:#1f2937;
+      font-weight:800;
+    }
+    .week-buttons{display:flex;gap:8px;}
+
+    /* Buttons */
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      border:none;
+      cursor:pointer;
+      border-radius:9999px;
+      padding:6px 12px;
+      font-size:13px;
+      line-height:1.1;
+      transition:background .15s,color .15s,box-shadow .15s,transform .05s;
+      text-decoration:none!important;
+    }
+    .btn.primary{
+      background:#0056b3;
+      color:#fff;
+    }
+    .btn.primary:hover{
+      background:#007bff;
+      box-shadow:0 2px 8px rgba(2,132,199,.25);
+    }
+    .btn.ghost{
+      background:#0056b3;
+      color:#fff;
+    }
+    .btn.ghost:hover{
+      background:#007bff;
+      box-shadow:0 2px 10px rgba(15,23,42,.12);
+    }
+    .btn.danger{
+      background:#e11d48;
+      color:#fff;
+    }
+    .btn.danger:hover{
+      background:#b91c1c;
+    }
+    .btn:active{transform:translateY(1px);}
+
+    .week-buttons .btn{
+      background:#0056b3;
+      color:#fff;
+      border:1px solid #dbe1ff;
+      padding:6px 14px;
+      font-weight:700;
+    }
+    .week-buttons .btn:hover{
+      background:#0ea5e9;
+      box-shadow:0 2px 10px rgba(30,41,59,.12);
+    }
+
+    /* Lab selector row + legend */
+    .lab-availability-header{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:16px;
+      margin:6px 0 16px;
+    }
+    .lab-select{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      margin:0;
+    }
+    .lab-select label{
+      font-weight:700;
+      color:#1f2937;
+    }
+    .lab-select select{
+      padding:6px 10px;
+      font-size:14px;
+      border:1px solid #cfd8e3;
+      border-radius:8px;
+      background:#fff;
+    }
+
+    /* Inline legend beside the lab selector */
+    .lab-select .schedule-legend.inline{
+      display:flex;
+      flex-direction:row;
+      gap:10px;
+      align-items:center;
+      margin-left:10px;
+      white-space:nowrap;
+    }
+    .schedule-legend .legend-item{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      font-size:12px;
+      font-weight:700;
+      color:#334155;
+      white-space:nowrap;
+    }
+    .schedule-legend .legend-swatch{
+      width:12px;
+      height:12px;
+      border-radius:3px;
+      border:1px solid;
+      display:inline-block;
+    }
+    .schedule-legend .legend-swatch.sched{
+      background:#e6f0ff;
+      border-color:#cfe0ff;
+    }
+    .schedule-legend .legend-swatch.req{
+      background:#fff6e6;
+      border-color:#ffe2b8;
+    }
+    .schedule-legend .legend-swatch.active{
+      background:#d4edda;
+      border-color:#28a745;
+    }
+
+    @media (max-width:640px){
+      .lab-availability-header{
+        flex-direction:column;
+        align-items:stretch;
+      }
+      .lab-select .schedule-legend.inline{
+        margin-left:0;
+        flex-wrap:wrap;
+      }
+    }
+
+    /* Grid */
+    .schedule-grid{
+      overflow-x:auto;
+      max-width:1100px;
+      margin:0 auto;
+    }
+    .weekly-schedule{
+      width:100%;
+      border-collapse:collapse;
+      table-layout:fixed;
+      background:#fff;
+      border-radius:12px;
+      overflow:hidden;
+    }
+    .weekly-schedule thead th{
+      background:#0f172a;
+      color:#fff;
+      font-weight:700;
+      padding:8px;
+      text-align:center;
+      font-size:13px;
+    }
+    .weekly-schedule td,
+    .weekly-schedule th{
+      border:1px solid #e5e7eb;
+      vertical-align:top;
+      padding:8px;
+    }
+    .day-cell{
+      min-width:150px;
+      text-align:left;
+      position:relative;
+    }
+
+    /* Section headers inside each day cell */
+    .cell-section{margin-bottom:10px;}
+    .cell-title{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      margin:2px 0 6px;
+    }
+    .cell-title span{
+      font-weight:900;
+      font-size:12px;
+      letter-spacing:.04em;
+      text-transform:uppercase;
+      color:#0f172a;
+    }
+    .cell-title.with-line i{
+      display:block;
+      flex:1;
+      height:0;
+      border-bottom:2px solid #0ea5e9;
+      opacity:.9;
+    }
+    .cell-title.with-line.alt i{
+      border-bottom-color:#f59e0b;
+    }
+
+    /* Entry blocks */
+    .entry-block{
+      width:100%;
+      max-width:100%;
+      background:#eef5ff;
+      border:1px solid #d9e6ff;
+      border-radius:12px;
+      padding:6px 8px;
+      margin-bottom:6px;
+      text-align:left;
+      display:flex;
+      flex-direction:column;
+      align-items:flex-start;
+      gap:3px;
+      box-sizing:border-box;
+      position:relative;
+      z-index:2;
+      pointer-events:auto;
+    }
+    .entry-block .title,
+    .entry-block .meta{
+      margin:0;
+      line-height:1.25;
+    }
+    .entry-block .title,
+    .eb-teacher{
+      font-weight:900;
+      color:#0f172a;
+      font-size:12px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      width:100%;
+    }
+    .entry-block .meta,
+    .eb-course{
+      color:#334155;
+      font-weight:700;
+      letter-spacing:.2px;
+      font-size:11px;
+      width:100%;
+    }
+    .entry-block .eb-time{
+      color:#334155;
+      letter-spacing:.2px;
+      font-size:10px;
+      width:100%;
+      font-weight:800;
+    }
+    .entry-block.small{
+      padding:4px 6px;
+      border-radius:10px;
+      gap:2px;
+    }
+    .entry-block.small .title,
+    .entry-block.small .eb-teacher{font-size:11px;}
+    .entry-block.small .eb-time{font-size:9px;}
+
+    .entry-block.schedule{
+      background:#e6f0ff;
+      border:1px solid #cfe0ff;
+      cursor:pointer;
+    }
+    .entry-block.schedule.disabled{
+      cursor:default;
+      opacity:.8;
+    }
+    .entry-block.request{
+      background:#fff6e6;
+      border:1px solid #ffe2b8;
+    }
+    .entry-block.active-session{
+      background-color:#d4edda;
+      border-left:6px solid #28a745;
+    }
+    .entry-block.is-clickable{cursor:pointer;}
+
+    /* ====== Toast ====== */
+    .toast{
+      position:fixed;
+      left:50%;
+      bottom:20px;
+      z-index:6000;
+      min-width:240px;
+      max-width:360px;
+      padding:10px 12px;
+      border-radius:10px;
+      box-shadow:0 10px 30px rgba(0,0,0,.15);
+      color:#0f172a;
+      background:#ffffff;
+      border:1px solid #e5e7eb;
+      display:none;
+      opacity:0;
+      transform:translate(-50%,12px);
+      transition:opacity .25s ease,transform .25s ease;
+      font-size:13px;
+      line-height:1.2;
+    }
+    .toast.show{display:block;opacity:1;transform:translate(-50%,0);}
+    .toast.error{border-color:#fecaca;background:#fff1f2;color:#7f1d1d;}
+    .toast.success{border-color:#bbf7d0;background:#ecfdf5;color:#065f46;}
+    .toast.info{border-color:#bfdbfe;background:#eff6ff;color:#1e3a8a;}
+    .toast.in-modal{
+      position:absolute;
+      left:50%;
+      top:50%;
+      right:auto;
+      bottom:auto;
+      transform:translate(-50%,-50%);
+      width:min(420px,90%);
+      z-index:6200;
+    }
+
+    .schedule-form .invalid{
+      border-color:#ef4444!important;
+      outline:none;
+      box-shadow:0 0 0 3px rgba(239,68,68,.15);
+    }
+    .schedule-form .error-text{
+      margin-top:4px;
+      font-size:12px;
+      color:#991b1b;
+    }
+    .checkbox-group.invalid{
+      border-color:#ef4444!important;
+      box-shadow:0 0 0 3px rgba(239,68,68,.15);
+    }
+    .schedule-form .readonly{
+      background:#f3f4f6;
+      color:#374151;
+      cursor:not-allowed;
+    }
+
+    .checkbox-group{
+      display:flex;
+      flex-wrap:wrap;
+      gap:6px 12px;
+      background:#f9fafb;
+      padding:8px;
+      border-radius:10px;
+      border:1px solid #e5e7eb;
+      font-size:12px;
+    }
+    .grid-2{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:8px;
+    }
+
+    /* ========= SCHEDULE MODAL (Create Schedule) – COMPACT ========= */
+
+    body.no-scroll,
+    .modal-open{
+      overflow:hidden;
+    }
+
+    /* base overlay for other modals (edit, confirm) */
+    .modal-overlay{
+      position:fixed;
+      inset:0;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      background:rgba(15,23,42,.35);
+      z-index:9999;
+    }
+
+    /* local overlay only for schedule modal (inside content-area) */
+    .modal-overlay.local{
+      position:absolute;
+      inset:0;
+      z-index:1000;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:16px;
+      box-sizing:border-box;
+      background:rgba(0,0,0,.05);
+    }
+
+    .modal-content{
+      background:#fff;
+      border-radius:12px;
+      border:1px solid #e5e7eb;
+      width:min(1100px,96%);
+      box-shadow:0 20px 60px rgba(0,0,0,.25);
+      position:relative;
+      max-height:76vh;
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+    }
+
+    .modal-content.two-col .modal-body{
+      display:grid;
+      grid-template-columns:0.8fr 1.2fr;
+      gap:12px;
+    }
+
+    .modal-header{
+      position:relative;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:8px;
+      padding:10px 12px;
+      border-bottom:1px solid #e5e7eb;
+      background:#f8fafc;
+      border-radius:12px 12px 0 0;
+    }
+    .modal-header.sticky{
+      position:sticky;
+      top:0;
+      z-index:10;
+      background:linear-gradient(#0f172a,#111827);
+      color:#fff;
+      border-bottom:none;
+      border-radius:12px 12px 0 0;
+    }
+    .modal-header.sticky .modal-title{
+      color:#fff;
+      font-weight:900;
+    }
+    .modal-title{
+      margin:0;
+      font-size:15px;
+      color:#111827;
+      font-weight:800;
+    }
+    .close-x{
+      appearance:none;
+      border:none;
+      background:transparent;
+      font-size:22px;
+      line-height:1;
+      cursor:pointer;
+      color:#6b7280;
+    }
+
+    .modal-body{padding:12px;}
+
+    .modal-form{
+      padding:0;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+    .modal-form.scrollable{
+      flex:1 1 auto;
+      overflow:auto;
+      padding-right:8px;
+      min-height:0;
+    }
+    .modal-form.scrollable::-webkit-scrollbar{width:8px;}
+    .modal-form.scrollable::-webkit-scrollbar-thumb{background:#c7ced9;border-radius:8px;}
+    .modal-form.scrollable::-webkit-scrollbar-track{background:#f1f3f5;}
+
+    .form-subtitle{
+      font-size:14px;
+      margin-bottom:2px;
+      font-weight:600;
+      color:#0f172a;
+    }
+
+    .schedule-form label{
+      font-weight:600;
+      color:#1f2937;
+      font-size:12px;
+      margin-bottom:2px;
+    }
+    .schedule-form input[type="text"],
+    .schedule-form input[type="number"],
+    .schedule-form input[type="date"],
+    .schedule-form input[type="time"],
+    .schedule-form select{
+      border:1px solid #cfd8e3;
+      border-radius:8px;
+      padding:6px 10px;
+      font-size:13px;
+      background:#fff;
+      box-sizing:border-box;
+    }
+
+    .modal-actions{
+      display:flex;
+      gap:8px;
+      justify-content:flex-end;
+      margin-top:6px;
+    }
+    .modal-actions .btn{
+      padding:6px 12px;
+      font-size:13px;
+    }
+
+    /* Preview pane (right side of schedule modal) */
+    .preview-pane{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+      border:1px solid #e5e7eb;
+      border-radius:12px;
+      background:#fff;
+    }
+    .preview-header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:8px 10px;
+      border-bottom:1px solid #e5e7eb;
+      background:#0f172a;
+      color:#fff;
+      border-radius:12px 12px 0 0;
+    }
+    .ph-title{font-weight:700;font-size:12px;}
+    .ph-range{font-size:11px;opacity:.9;}
+    .preview-scroll{
+      max-height:55vh;
+      overflow:auto;
+      padding:8px;
+      background:#f8fafc;
+    }
+
+    .weekly-schedule.mini thead th{font-size:11px;padding:6px;}
+    .weekly-schedule.mini td{padding:6px;vertical-align:top;}
+
+    @media (max-width:960px){
+      .modal-content.two-col .modal-body{grid-template-columns:1fr;}
+      .preview-scroll{max-height:40vh;}
+    }
+
+    /* ========== EDIT MODAL SMALL FIELDS ========== */
+    .field{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      margin:8px 0;
+    }
+    .ro{
+      background:#f8fafc;
+      border:1px dashed #e5e7eb;
+      padding:8px 10px;
+      border-radius:8px;
+    }
+    #editSectionInput{
+      width:100%;
+      padding:8px 10px;
+      border:1px solid #cfd8e3;
+      border-radius:8px;
+    }
+    .error-text{
+      color:#dc2626;
+      font-size:12px;
+      margin-top:4px;
+    }
+    .invalid{
+      border-color:#dc2626!important;
+      outline-color:#dc2626!important;
+    }
+
+    /* ========== CONFIRMATION MODAL (Cancel Slot) – NEW DESIGN ========== */
+    .confirm-overlay{
+      position:fixed;
+      inset:0;
+      z-index:12000;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      background:rgba(15,23,42,.45);
+    }
+    .confirm-modal{
+      background:#fff;
+      border-radius:16px;
+      box-shadow:0 24px 60px rgba(15,23,42,.35);
+      max-width:420px;
+      width:92%;
+      overflow:hidden;
+      border:1px solid #e5e7eb;
+    }
+    .confirm-header{
+      padding:14px 18px;
+      border-bottom:1px solid #e5e7eb;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+      background:linear-gradient(to right,#fee2e2,#fef2f2);
+    }
+    .confirm-header h3{
+      margin:0;
+      font-size:18px;
+      font-weight:800;
+      color:#991b1b;
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    .confirm-header h3::before{
+      content:"⚠️";
+      font-size:20px;
+    }
+    .confirm-close{
+      background:transparent;
+      border:none;
+      font-size:20px;
+      cursor:pointer;
+      color:#6b7280;
+    }
+    .confirm-body{
+      padding:18px 20px 10px;
+    }
+    .confirm-body p{
+      margin:4px 0;
+      font-size:14px;
+      color:#374151;
+    }
+    .confirm-note{
+      font-size:13px;
+      color:#4b5563;
+      margin-top:6px;
+    }
+    .confirm-actions{
+      display:flex;
+      justify-content:flex-end;
+      gap:10px;
+      padding:12px 20px 18px;
+    }
+    .confirm-actions .btn{
+      min-width:120px;
+      justify-content:center;
+    }
+    #confirmOverlay .btn.ghost{
+      background:#f3f4f6;
+      color:#111827;
+    }
+    #confirmOverlay .btn.ghost:hover{
+      background:#e5e7eb;
+    }
+    #confirmOverlay .btn.danger{
+      background:#ef4444;
+      color:#ffffff;
+      font-weight:700;
+    }
+    #confirmOverlay .btn.danger:hover{
+      background:#b91c1c;
+    }
+  </style>
+</head>
+<body class="teacher-page">
+<div class="dashboard-container">
+  {% include 'includes/teacher_sidebar.html' %}
+
+  <div class="main-panel">
+    {% include 'includes/teacher_header.html' %}
+
+    <section class="content-area">
+      <div class="schedule-header">
+        <h2 class="weekly-title">Weekly Schedule</h2>
+        {% if is_assigned %}
+          <div class="schedule-toolbar">
+            <button type="button" onclick="openModal()" class="btn primary">+ Create Schedule</button>
+          </div>
+        {% endif %}
+      </div>
+
+      {% if not is_assigned %}
+        <div class="no-access card">
+          <p>You are not assigned to a laboratory. Please contact the admin.</p>
+        </div>
+      {% else %}
+
+        <!-- Filter by lab -->
+        <div class="lab-availability-header">
+          <form method="get" id="labFilterForm" class="lab-select">
+            <label for="lab_id">Select Laboratory:</label>
+            <select name="lab_id" id="lab_id" onchange="this.form.submit()">
+              {% for lab in labs %}
+                <option value="{{ lab.0 }}" {% if lab.0|stringformat:"s" == selected_lab_id|stringformat:"s" %}selected{% endif %}>
+                  Lab {{ lab.1 }}{% if assigned_lab and lab.0 == assigned_lab %} (Assigned){% endif %}
+                </option>
+              {% endfor %}
+            </select>
+
+            <!-- Legend -->
+            <span class="schedule-legend inline" aria-label="Legend">
+              <span class="legend-item"><i class="legend-swatch sched"></i> Scheduled</span>
+              <span class="legend-item"><i class="legend-swatch req"></i> Request</span>
+              <span class="legend-item"><i class="legend-swatch active"></i> Active</span>
+            </span>
+
+            <input type="hidden" name="week" value="{{ base_week }}">
+          </form>
+        </div>
+
+        <!-- Week nav -->
+        <div class="week-navigation">
+          <h3 class="week-range" id="pageWeekRange">{{ week_range_display }}</h3>
+          <div class="week-buttons">
+            <a class="btn ghost" id="pagePrevWeek" href="?week={{ prev_week }}{% if selected_lab_id %}&lab_id={{ selected_lab_id }}{% endif %}">← Previous</a>
+            <a class="btn ghost" id="pageNextWeek" href="?week={{ next_week }}{% if selected_lab_id %}&lab_id={{ selected_lab_id }}{% endif %}">Next →</a>
+          </div>
+        </div>
+
+        <!-- Main grid -->
+        <div class="toolbar-row" style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+          <h4 id="mainGridTitle" class="muted">
+            {% with sel_lab=selected_lab_id %}
+              {% for lab in labs %}
+                {% if lab.0|stringformat:"s" == sel_lab|stringformat:"s" %}
+                  Lab {{ lab.1 }} — Your Schedule
+                {% endif %}
+              {% endfor %}
+            {% endwith %}
+          </h4>
+        </div>
+
+        <div class="schedule-grid card">
+          <table class="weekly-schedule table" id="mainGrid">
+            <thead>
+              <tr>
+                {% for day in days %}<th>{{ day }}</th>{% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                {% for day in days %}
+                  <td class="day-cell" data-day="{{ day }}"></td>
+                {% endfor %}
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Create Schedule Modal (centered in content-area) -->
+        <div id="scheduleModal" class="modal-overlay local" style="display:none;">
+          <div class="modal-content two-col">
+            <div class="modal-header sticky">
+              <h3 class="modal-title">Create Schedule</h3>
+              <div class="week-buttons">
+                <button type="button" class="btn ghost" id="modalPrevWeek">← Previous</button>
+                <button type="button" class="btn ghost" id="modalNextWeek">Next →</button>
+              </div>
+              <button type="button" class="close-x" onclick="closeModal()">×</button>
+            </div>
+
+            <div class="modal-body">
+              <!-- Left: Form -->
+              <form method="POST" action="{% url 'create_schedule' %}"
+                    class="schedule-form modal-form scrollable"
+                    id="createForm" novalidate>
+                {% csrf_token %}
+                <div class="form-subtitle" id="labFormTitle">Selected: —</div>
+
+                <label>Course:</label>
+                {% with sel_course=form_vals.course_id|default_if_none:"" %}
+                <select name="course_id" required>
+                  <option value="">-- Select Course --</option>
+                  {% for c in courses %}
+                    <option value="{{ c.0 }}" {% if sel_course|stringformat:"s" == c.0|stringformat:"s" %}selected{% endif %}>
+                      {{ c.1 }}
+                    </option>
+                  {% endfor %}
+                </select>
+                {% endwith %}
+
+                <label>Year and Section:</label>
+                <input type="text" name="student_year_and_section" required placeholder="e.g., BSIT 2A"
+                       value="{{ form_vals.section|default_if_none:'' }}" />
+
+                <label>Lab:</label>
+                {% with sel_lab=form_vals.lab_id|default_if_none:selected_lab_id %}
+                <select name="lab_id" id="labSelect" required>
+                  <option value="">-- Select Lab --</option>
+                  {% for lab in labs %}
+                    <option value="{{ lab.0 }}" {% if sel_lab|stringformat:"s" == lab.0|stringformat:"s" %}selected{% endif %}>
+                      Lab {{ lab.1 }}
+                    </option>
+                  {% endfor %}
+                </select>
+                {% endwith %}
+
+                <label>Select Days:</label>
+                {% with checked_list=form_vals.days|default_if_none:"" %}
+                <div class="checkbox-group">
+                  {% for d in days %}
+                    <label>
+                      <input type="checkbox" name="days" value="{{ d }}"
+                             {% if checked_list and d in checked_list %}checked{% endif %}>
+                      {{ d }}
+                    </label>
+                  {% endfor %}
+                </div>
+                {% endwith %}
+
+                <div class="grid-2">
+                  <div>
+                    <label>Start Date:</label>
+                    <input type="date" name="start_date" required value="{{ form_vals.start_date|default_if_none:'' }}">
+                  </div>
+                  <div>
+                    <label>End Date:</label>
+                    <input type="date" name="end_date" required value="{{ form_vals.end_date|default_if_none:'' }}">
+                  </div>
+                </div>
+
+                <div class="grid-2">
+                  <div>
+                    <label>Start Time:</label>
+                    <input type="time" name="start_time" required value="{{ form_vals.start_time|default_if_none:'' }}">
+                  </div>
+                  <div>
+                    <label>End Time:</label>
+                    <input type="time" name="end_time" required value="{{ form_vals.end_time|default_if_none:'' }}">
+                  </div>
+                </div>
+
+                <div class="muted" style="margin-top:4px">
+                  Created slots must be within the day’s <strong>Operating Time</strong> and between
+                  <strong>3 to 5 hours</strong>.
+                </div>
+
+                <div class="modal-actions">
+                  <button type="submit" class="btn primary">Submit</button>
+                  <button type="button" class="btn ghost" onclick="closeModal()">Cancel</button>
+                </div>
+              </form>
+
+              <!-- Right: LAB-specific weekly preview (modal) -->
+              <div class="preview-pane" id="labPreview">
+                <div class="preview-header">
+                  <div class="ph-title" id="labPreviewTitle">Selected Lab — Preview</div>
+                  <div class="ph-range" id="labWeekRange">{{ week_range_display }}</div>
+                </div>
+                <div class="preview-scroll">
+                  <table class="weekly-schedule mini" id="labGrid">
+                    <thead>
+                      <tr>{% for d in days %}<th>{{ d }}</th>{% endfor %}</tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        {% for d in days %}
+                          <td class="day-cell" data-day="{{ d }}"></td>
+                        {% endfor %}
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div> <!-- /modal-body -->
+          </div>
+        </div>
+      {% endif %}
+    </section>
+  </div>
+</div>
+
+<!-- EDIT SECTION MODAL -->
+<!-- EDIT SECTION MODAL -->
+<div id="editSectionModal" class="modal-overlay" style="display:none;">
+  <div class="modal-content edit card" id="editModalContent" role="dialog"
+       aria-modal="true" aria-labelledby="editModalTitle">
+    <div class="modal-header">
+      <h3 id="editModalTitle">Edit Schedule</h3>
+      <button type="button" class="close-x" onclick="closeEditModal()" aria-label="Close">×</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="field">
+        <label>Teacher</label>
+        <div id="roTeacher" class="ro">—</div>
+      </div>
+
+      <div class="field">
+        <label>Current Course</label>
+        <div id="roCourse" class="ro">—</div>
+      </div>
+
+      <div class="field">
+        <label for="editCourseSelect">Change Course (optional)</label>
+        <select id="editCourseSelect">
+          <option value="">-- Keep current course --</option>
+          {% for c in courses %}
+            <option value="{{ c.0 }}">{{ c.1 }}</option>
+          {% endfor %}
+        </select>
+        <div id="editCourseErr" class="error-text" style="display:none;"></div>
+      </div>
+
+      <div class="field">
+        <label>Time</label>
+        <div id="roTime" class="ro">—</div>
+      </div>
+
+      <div class="field">
+        <label for="editSectionInput">Year and Section</label>
+        <input id="editSectionInput" type="text" placeholder="e.g., BSIT 2A" autocomplete="off">
+        <div id="editErr" class="error-text" style="display:none;"></div>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button type="button" class="btn ghost" onclick="closeEditModal()">Close</button>
+      <button type="button" class="btn danger" id="cancelScheduleBtn">Cancel Slot</button>
+      <button type="button" class="btn primary" id="saveSectionBtn">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- CANCEL SLOT CONFIRMATION MODAL -->
+<div id="confirmOverlay" class="confirm-overlay" style="display:none;">
+  <div class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+    <div class="confirm-header">
+      <h3 id="confirmTitle">Cancel Schedule</h3>
+      <button type="button" class="confirm-close" id="confirmCloseBtn" aria-label="Close">×</button>
+    </div>
+    <div class="confirm-body">
+      <p id="confirmMessage" class="confirm-title">
+        Are you sure you want to cancel this schedule?
+      </p>
+      <p class="confirm-note" id="confirmNote">
+        This will mark the slot as <strong>Cancelled</strong> and free it for other reservations
+        or lab requests. This action cannot be undone.
+      </p>
+    </div>
+    <div class="confirm-actions">
+      <button type="button" class="btn ghost" id="confirmNoBtn">Keep Schedule</button>
+      <button type="button" class="btn danger" id="confirmYesBtn">Yes, Cancel Slot</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="toast" aria-live="assertive" aria-atomic="true"></div>
+
+{% if error %}{{ error|json_script:"server-error-json" }}{% endif %}
+{% if success %}{{ success|json_script:"server-success-json" }}{% endif %}
+{% if open_modal %}<script id="open-modal-flag" type="application/json">true</script>{% endif %}
+
+<script>
+function openModal(){ window.__openModal && window.__openModal(); }
+function closeModal(){ window.__closeModal && window.__closeModal(); }
+
+/* ================== Edit modal helpers ================== */
+let __editingScheduleId = null;
+function openEditModal(scheduleId, currentSection, info, canCancel){
+  try{
+    __editingScheduleId = (scheduleId!==null && !isNaN(Number(scheduleId))) ? Number(scheduleId) : null;
+    document.getElementById('editSectionInput').value = currentSection || "";
+    document.getElementById('editErr').style.display = 'none';
+    document.getElementById('editCourseErr').style.display = 'none';
+    document.getElementById('roTeacher').textContent = (info && info.teacher) || '—';
+    document.getElementById('roCourse').textContent  = (info && info.course)  || '—';
+    document.getElementById('roTime').textContent    = (info && info.time)    || '—';
+
+    var courseSel = document.getElementById('editCourseSelect');
+    if (courseSel) {
+      var cid = (info && info.course_id) ? String(info.course_id) : "";
+      courseSel.value = cid || "";
+    }
+
+    // ✅ hide Cancel button for past slots
+    var cancelBtn = document.getElementById('cancelScheduleBtn');
+    if (cancelBtn) {
+      var allowed = (canCancel !== false); // default = true
+      cancelBtn.style.display = allowed ? 'inline-flex' : 'none';
+    }
+
+    document.getElementById('editSectionModal').style.display = 'flex';
+    document.body.classList.add('modal-open');
+  }catch(e){ console.error(e); }
+}
+function closeEditModal(){
+  __editingScheduleId = null;
+  document.getElementById('editSectionModal').style.display = 'none';
+  document.body.classList.remove('modal-open');
+}
+
+/* ====== Confirm modal helpers ====== */
+let __confirmOnYes = null;
+function openConfirm(opts){
+  __confirmOnYes = typeof opts.onYes === 'function' ? opts.onYes : null;
+  document.getElementById('confirmTitle').textContent   = opts.title   || 'Confirm';
+  document.getElementById('confirmMessage').textContent = opts.message || 'Are you sure?';
+  document.getElementById('confirmNote').textContent    = opts.note    || '';
+  document.getElementById('confirmYesBtn').textContent  = opts.yesLabel || 'Yes';
+  document.getElementById('confirmNoBtn').textContent   = opts.noLabel  || 'Cancel';
+  document.getElementById('confirmOverlay').style.display = 'flex';
+  document.body.classList.add('modal-open');
+}
+function closeConfirm(){
+  document.getElementById('confirmOverlay').style.display = 'none';
+  document.body.classList.remove('modal-open');
+  __confirmOnYes = null;
+}
+document.getElementById('confirmNoBtn').addEventListener('click', closeConfirm);
+document.getElementById('confirmCloseBtn').addEventListener('click', closeConfirm);
+document.getElementById('confirmYesBtn').addEventListener('click', function(){
+  if (__confirmOnYes) { const fn = __confirmOnYes; closeConfirm(); fn(); }
+});
+
+/* ================== Page bootstrap ================== */
+document.addEventListener('DOMContentLoaded', function(){
+
+  /* Toast */
+  (function ensureToast(){
+    var t = document.getElementById('toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.id = 'toast';
+      t.className = 'toast';
+      t.setAttribute('aria-live','assertive');
+      t.setAttribute('aria-atomic','true');
+      document.body.appendChild(t);
+    }
+  })();
+  function showToast(message, type) {
+    var t = document.getElementById('toast');
+    t.textContent = message;
+    t.className = 'toast ' + (type || 'info') + (t.classList.contains('in-modal') ? ' in-modal' : '');
+    t.style.display = 'block';
+    t.offsetHeight;
+    t.classList.add('show');
+    setTimeout(function(){
+      t.classList.remove('show');
+      setTimeout(function(){ t.style.display = 'none'; }, 300);
+    }, 3600);
+  }
+
+  function getCookie(name){ const v=`; ${document.cookie}`.split(`; ${name}=`); return v.length===2 ? decodeURIComponent(v.pop().split(';').shift()) : undefined; }
+  const CSRF_TOKEN = getCookie('csrftoken');
+
+  var BASE_WEEK = "{{ base_week }}";
+  var viewSelect = document.getElementById('lab_id');
+
+  if (viewSelect && viewSelect.value) {
+    loadLabPreview(viewSelect.value, BASE_WEEK, 'page');
+  }
+
+  (function wirePageWeekButtons(){
+    var prev = document.getElementById('pagePrevWeek');
+    var next = document.getElementById('pageNextWeek');
+    function navigate(deltaDays){
+      var d0 = new Date(BASE_WEEK);
+      var d1 = new Date(d0.getTime() + deltaDays*24*60*60*1000);
+      var y = d1.getFullYear(), m = String(d1.getMonth()+1).padStart(2,'0'), d = String(d1.getDate()).padStart(2,'0');
+      var weekStr = y + '-' + m + '-' + d;
+      var url = new URL(window.location.href);
+      url.searchParams.set('week', weekStr);
+      if (viewSelect && viewSelect.value) url.searchParams.set('lab_id', viewSelect.value);
+      window.location.href = url.toString();
+    }
+    if (prev) prev.addEventListener('click', function(ev){ ev.preventDefault(); navigate(-7); });
+    if (next) next.addEventListener('click', function(ev){ ev.preventDefault(); navigate(+7); });
+  })();
+
+  function placeToastInModal(inModal) {
+    var t = document.getElementById('toast');
+    var modalContent = document.querySelector('#scheduleModal .modal-content');
+    if (inModal && modalContent) { modalContent.appendChild(t); t.classList.add('in-modal'); }
+    else { document.body.appendChild(t); t.classList.remove('in-modal'); }
+  }
+
+  window.__openModal = function(){
+    document.getElementById('scheduleModal').style.display = 'flex';
+    document.body.classList.add('no-scroll');
+    placeToastInModal(true);
+    updateModalLabTitles();
+    var sel = document.getElementById('labSelect');
+    var labId = sel ? sel.value : "";
+    if (labId) { loadLabPreview(labId, BASE_WEEK, 'modal'); }
+  };
+  window.__closeModal = function(){
+    placeToastInModal(false);
+    document.getElementById('scheduleModal').style.display = 'none';
+    document.body.classList.remove('no-scroll');
+  };
+
+  window.addEventListener('click', function(e) {
+    var overlay = document.getElementById('scheduleModal');
+    var content = document.querySelector('#scheduleModal .modal-content');
+    if (overlay && content && e.target === overlay && !content.contains(e.target)) { window.__closeModal(); }
+    var eOverlay = document.getElementById('editSectionModal');
+    var eContent = document.querySelector('#editSectionModal .modal-content');
+    if (eOverlay && eContent && e.target === eOverlay && !eContent.contains(e.target)) { closeEditModal(); }
+  });
+
+  (function autoOpenIfFlags() {
+    var errEl = document.getElementById('server-error-json');
+    var successEl = document.getElementById('server-success-json');
+    var flagEl = document.getElementById('open-modal-flag');
+    var shouldOpen = new URL(window.location.href).searchParams.get('modal') === '1';
+    if (errEl) { try { var msg = JSON.parse(errEl.textContent); if (msg) showToast(String(msg), 'error'); } catch(e){} shouldOpen = true; }
+    if (successEl) { try { var s = JSON.parse(successEl.textContent); if (s) showToast(String(s), 'success'); } catch(e){} }
+    if (flagEl) shouldOpen = true;
+    if (shouldOpen) window.__openModal();
+  })();
+
+  (function wireModalWeekButtons() {
+    var prevBtn = document.getElementById('modalPrevWeek');
+    var nextBtn = document.getElementById('modalNextWeek');
+    if (prevBtn) prevBtn.addEventListener('click', function(){ navigateModalWeek(-7); });
+    if (nextBtn) nextBtn.addEventListener('click', function(){ navigateModalWeek(+7); });
+  })();
+
+  function navigateModalWeek(deltaDays) {
+    var d0 = new Date(BASE_WEEK);
+    var d1 = new Date(d0.getTime() + deltaDays*24*60*60*1000);
+    var y = d1.getFullYear(), m = String(d1.getMonth()+1).padStart(2,'0'), d = String(d1.getDate()).padStart(2,'0');
+    var weekStr = y + '-' + m + '-' + d;
+    BASE_WEEK = weekStr;
+    var sel = document.getElementById('labSelect');
+    var formLabId = sel ? sel.value : '';
+    if (formLabId) { loadLabPreview(formLabId, weekStr, 'modal'); }
+    var pageLabId = (document.getElementById('lab_id') || {}).value;
+    if (pageLabId) { loadLabPreview(pageLabId, weekStr, 'page'); }
+  }
+
+  document.addEventListener('change', function(e){
+    if (e.target && e.target.id === 'labSelect') {
+      updateModalLabTitles();
+      var labId = e.target.value;
+      if (labId) loadLabPreview(labId, BASE_WEEK, 'modal');
+      else clearModalPreview();
+    }
+  });
+  function updateModalLabTitles() {
+    var sel = document.getElementById('labSelect');
+    var text = '—';
+    if (sel && sel.value) { var opt = sel.options[sel.selectedIndex]; text = opt ? opt.text : '—'; }
+    var formTitle = document.getElementById('labFormTitle'); if (formTitle) formTitle.textContent = 'Selected: ' + text;
+    var previewTitle = document.getElementById('labPreviewTitle'); if (previewTitle) previewTitle.textContent = text + ' Preview';
+  }
+  function clearModalPreview() {
+    var grid = document.getElementById('labGrid');
+    if (grid) grid.querySelectorAll('td.day-cell').forEach(function(td){ td.innerHTML = ""; });
+    var range = document.getElementById('labWeekRange'); if (range) range.textContent = "";
+    var title = document.getElementById('labPreviewTitle'); if (title) title.textContent = 'Selected Lab — Preview';
+  }
+
+  const DAY_INDEX = {Monday:0, Tuesday:1, Wednesday:2, Thursday:3, Friday:4, Saturday:5, Sunday:6};
+  function mondayOf(dateStr){ const d=new Date(dateStr); const dow=d.getDay(); const delta=(dow+6)%7; d.setDate(d.getDate()-delta); return d; }
+  function dateOfDayInWeek(baseWeekStr, dayname){
+    const mon = mondayOf(baseWeekStr); const idx = DAY_INDEX[dayname] ?? 0;
+    const d = new Date(mon); d.setDate(mon.getDate() + idx);
+    const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), da=String(d.getDate()).padStart(2,'0');
+    return `${y}-${m}-${da}`;
+  }
+  function splitTime24(range){
+    const m = (range||'').match(/^(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})$/);
+    return m ? [m[1], m[2]] : [null,null];
+  }
+  // ✅ helper to detect past slots
+  function isPastSlot(dateStr, hhmm){
+    if (!dateStr || !hhmm) return false;
+    const [Y,M,D] = dateStr.split('-').map(n=>parseInt(n,10));
+    if (!Y || !M || !D) return false;
+    const [h,m] = hhmm.split(':').map(n=>parseInt(n,10)||0);
+    const slotStart = new Date(Y, M-1, D, h, m, 0);
+    const now = new Date();
+    return slotStart < now;
+  }
+
+  async function loadLabPreview(labId, weekMondayStr, target) {
+    var baseUrl = "{% url 'lab_week_data' %}";
+    var params = new URLSearchParams({ lab_id: labId, week: weekMondayStr });
+    if (target === 'page') { params.set('mine','1'); params.set('include_requests','0'); }
+    else { params.set('include_requests','1'); }
+
+    var grid, rangeEl, capEl;
+    if (target === 'modal') { grid = document.getElementById('labGrid'); rangeEl = document.getElementById('labWeekRange'); capEl = document.getElementById('labCaption'); }
+    else { grid = document.getElementById('mainGrid'); rangeEl = document.getElementById('pageWeekRange'); capEl = document.getElementById('mainGridCaption'); }
+
+    if (capEl) capEl.textContent = "Loading…";
+    if (grid)  grid.querySelectorAll('td.day-cell').forEach(function(td){ td.innerHTML = ""; });
+
+    try {
+      var res = await fetch(baseUrl + "?" + params.toString(), { headers: { 'X-Requested-With':'XMLHttpRequest' }});
+      if (!res.ok) throw new Error('Failed to load lab data');
+      var data = await res.json();
+
+      if (rangeEl) rangeEl.textContent = data.week_range || "";
+      if (capEl) capEl.textContent = "Schedule for this week";
+
+      var entries    = data.entries || {};
+      var reqEntries = data.req_entries || {};
+      var timeSlots  = data.time_slots || [];
+      var DAYS_LIST = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+
+      DAYS_LIST.forEach(function(day){
+        var td = grid ? grid.querySelector('td.day-cell[data-day="' + day + '"]') : null;
+        if (!td) return;
+
+        timeSlots.forEach(function(t){
+          (entries[day] && entries[day][t] ? entries[day][t] : []).forEach(function(e){
+            var div = document.createElement('div');
+            div.className = 'entry-block small schedule' + (target === 'modal' ? ' disabled' : '');
+
+            var schedId = (e.id ?? e.schedule_id ?? null);
+            var sec     = (e.section || '');
+            var when12  = (e.time_display || e.time || '');
+            var time24  = (e.time_24 || e.time || '');
+            var course  = (e.course || '');
+            var courseId = (e.course_id || '');
+            var teacher = (e.teacher || '');
+            var dayname = (e.day || day);
+
+            div.setAttribute('data-schedule-id', (schedId!==null && !isNaN(Number(schedId))) ? String(schedId) : '');
+            div.setAttribute('data-section', sec);
+            div.setAttribute('data-time', when12);
+            div.setAttribute('data-time24', time24);
+            div.setAttribute('data-day', dayname);
+            div.setAttribute('data-course', course);
+            div.setAttribute('data-course-id', courseId);
+            div.setAttribute('data-teacher', teacher);
+
+            var shortTeacher = e.teacher_short || (function(){
+              if (!teacher) return '';
+              var parts = teacher.trim().split(/\s+/);
+              if (parts.length === 1) return parts[0];
+              return parts[0][0].toUpperCase() + '. ' + parts[parts.length-1];
+            })();
+            div.innerHTML =
+              '<div class="title eb-teacher">' + shortTeacher + '</div>' +
+              (course ? '<div class="meta eb-course">' + course + '</div>' : '') +
+              (sec ? '<div class="meta eb-course section-line">' + sec + '</div>' : '') +
+              (when12 ? '<div class="meta eb-time">' + when12 + '</div>' : '');
+
+            // Per-block click (page grid only)
+            if (target !== 'modal') {
+              div.addEventListener('click', function(){
+                var sid = div.getAttribute('data-schedule-id');
+                var sec0 = div.getAttribute('data-section') || '';
+                var tch = div.getAttribute('data-teacher') || '';
+                var crs = div.getAttribute('data-course') || '';
+                var crsId = div.getAttribute('data-course-id') || '';
+                var w12 = div.getAttribute('data-time') || '';
+                var dname = div.getAttribute('data-day') || day;
+                var t24 = div.getAttribute('data-time24') || '';
+                var parts = splitTime24(t24);
+                var startHH = parts[0] || '';
+                var dateISO = dateOfDayInWeek(BASE_WEEK, dname);
+                var canCancel = !(dateISO && startHH && isPastSlot(dateISO, startHH));
+
+                var mainGrid = document.getElementById('mainGrid');
+                if (mainGrid) mainGrid.__lastClickedBlock = div;
+
+                openEditModal(
+                  (sid && !isNaN(Number(sid))) ? Number(sid) : null,
+                  sec0,
+                  {teacher: tch, course: crs, course_id: crsId, time: w12},
+                  canCancel
+                );
+
+                if (!canCancel) {
+                  showToast("This schedule is already in the past. You can no longer cancel this slot.", "info");
+                }
+              });
+            }
+
+            td.appendChild(div);
+          });
+        });
+
+        if (target === 'modal') {
+          timeSlots.forEach(function(t){
+            (reqEntries[day] && reqEntries[day][t] ? reqEntries[day][t] : []).forEach(function(r){
+              var div = document.createElement('div');
+              var when = (r.time_display || r.time || '');
+              var by = r.requested_by ? ' • by ' + r.requested_by : '';
+              div.className = 'entry-block small request';
+              div.innerHTML =
+                '<div class="title eb-teacher">Request: ' + (r.status || 'Pending') + '</div>' +
+                (r.course  ? '<div class="meta eb-course">' + r.course  + '</div>' : '') +
+                (r.section ? '<div class="meta eb-course">' + r.section + '</div>' : '') +
+                '<div class="meta eb-time">' + when + by + '</div>';
+              td.appendChild(div);
+            });
+          });
+        }
+      });
+
+      var mainGrid = document.getElementById('mainGrid');
+      if (mainGrid && !mainGrid.__delegated) {
+        mainGrid.addEventListener('click', function(e){
+          var block = e.target.closest && e.target.closest('.entry-block.schedule');
+          if (!block || block.classList.contains('disabled')) return;
+          mainGrid.__lastClickedBlock = block;
+          var sid = block.getAttribute('data-schedule-id');
+          var sec = block.getAttribute('data-section') || '';
+          var teacher = block.getAttribute('data-teacher') || '';
+          var course  = block.getAttribute('data-course')  || '';
+          var courseId = block.getAttribute('data-course-id') || '';
+          var when    = block.getAttribute('data-time')    || '';
+          var dname   = block.getAttribute('data-day')     || 'Monday';
+          var t24     = block.getAttribute('data-time24')  || '';
+          var parts   = splitTime24(t24);
+          var startHH = parts[0] || '';
+          var dateISO = dateOfDayInWeek(BASE_WEEK, dname);
+          var canCancel = !(dateISO && startHH && isPastSlot(dateISO, startHH));
+
+          openEditModal(
+            (sid && !isNaN(Number(sid))) ? Number(sid) : null,
+            sec,
+            {teacher, course, course_id: courseId, time: when},
+            canCancel
+          );
+
+          if (!canCancel) {
+            showToast("This schedule is already in the past. You can no longer cancel this slot.", "info");
+          }
+        });
+        mainGrid.__delegated = true;
+      }
+
+    } catch (err) {
+      if (capEl) capEl.textContent = 'Schedule for this week';
+      console.error(err);
+      showToast('Failed to load lab preview.', 'error');
+    }
+  }
+
+  /* ================= SAVE / CANCEL Schedule (Edit modal) ================= */
+  const UPDATE_URL = new URL("{% url 'update_schedule_section' %}", window.location.origin).toString();
+
+  async function submitScheduleEdit(action) {
+    var input = document.getElementById('editSectionInput');
+    var err = document.getElementById('editErr');
+    var courseSel = document.getElementById('editCourseSelect');
+    var courseErr = document.getElementById('editCourseErr');
+
+    err.style.display = 'none';
+    courseErr.style.display = 'none';
+    input.classList.remove('invalid');
+    if (courseSel) courseSel.classList.remove('invalid');
+
+    var val = (input.value || '').trim();
+    var courseVal = courseSel ? (courseSel.value || '').trim() : "";
+
+    if (action !== 'cancel' && !val) {
+      err.textContent = 'Section cannot be empty.';
+      err.style.display = 'block';
+      input.classList.add('invalid');
+      return;
+    }
+
+    var sid = (__editingScheduleId!==null && !isNaN(Number(__editingScheduleId))) ? Number(__editingScheduleId) : null;
+
+    var body;
+    if (sid !== null) {
+      body = new URLSearchParams({ action: action, schedule_id: String(sid) });
+      if (action !== 'cancel') {
+        body.append('student_year_and_section', val);
+      }
+    } else {
+      var mainGrid = document.getElementById('mainGrid');
+      var block = mainGrid && mainGrid.__lastClickedBlock;
+      if (!block) {
+        err.textContent = 'Missing selection.';
+        err.style.display = 'block';
+        return;
+      }
+
+      var labId  = (document.getElementById('lab_id') || {}).value || '';
+      var day    = block.getAttribute('data-day') || 'Monday';
+      var time24 = block.getAttribute('data-time24') || '';
+      var parts = splitTime24(time24);
+      var dateISO = dateOfDayInWeek("{{ base_week }}", day);
+
+      if (!(labId && dateISO && parts[0] && parts[1])) {
+        err.textContent = 'Missing schedule locator (lab/date/time).';
+        err.style.display = 'block';
+        return;
+      }
+
+      body = new URLSearchParams({
+        action: action,
+        lab_id: labId,
+        date: dateISO,
+        start_time: parts[0],
+        end_time: parts[1]
+      });
+      if (action !== 'cancel') {
+        body.append('student_year_and_section', val);
+      }
+    }
+
+    if (courseVal) {
+      body.append('course_id', courseVal);
+    }
+
+    try {
+      const res = await fetch(UPDATE_URL, {
+        method: 'POST',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+          'X-CSRFToken': CSRF_TOKEN || ''
+        },
+        body
+      });
+      const data = await res.json().catch(()=>null);
+
+      if (!res.ok || !data || data.ok === false) {
+        var msg = (data && data.error) ? data.error : 'Failed to update schedule.';
+        if (action === 'cancel') {
+          courseErr.textContent = msg;
+          courseErr.style.display = 'block';
+        } else {
+          err.textContent = msg;
+          err.style.display = 'block';
+        }
+        console.error('Update error payload:', data);
+        return;
+      }
+
+      closeEditModal();
+      showToast(data.message || (action === 'cancel' ? 'Schedule cancelled.' : 'Schedule updated.'), 'success');
+      console.log('Update debug:', data);
+
+      var labId = (document.getElementById('lab_id') || {}).value || '';
+      if (labId) {
+        loadLabPreview(labId, BASE_WEEK, 'page');
+      }
+      var sel = document.getElementById('labSelect');
+      var formLabId = sel ? sel.value : '';
+      if (formLabId) {
+        loadLabPreview(formLabId, BASE_WEEK, 'modal');
+      }
+
+    } catch (e) {
+      console.error(e);
+      err.textContent = 'Network error. Please try again.';
+      err.style.display = 'block';
+    }
+  }
+
+  document.getElementById('saveSectionBtn').addEventListener('click', function(){
+    submitScheduleEdit('update');
+  });
+
+  document.getElementById('cancelScheduleBtn').addEventListener('click', function(){
+    openConfirm({
+      title: 'Cancel Schedule',
+      message: 'Are you sure you want to cancel this schedule?',
+      note: 'If confirmed, this class will be removed from your lab schedule and the slot will be freed.',
+      yesLabel: 'Yes, Cancel Slot',
+      noLabel: 'Keep Slot',
+      onYes: function(){ submitScheduleEdit('cancel'); }
+    });
+  });
+
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,19 @@
+{% load static %}
+<aside class="sidebar">
+  {# Always read-only in teacher view #}
+  {% include "includes/_sidebar_header.html" %}
+
+  <nav class="sidebar-menu">
+    <a href="{% url 'teacher_dashboard' %}" class="{% if current_page == 'Dashboard' %}active{% endif %}">Dashboard</a>
+    {% if assigned_lab %}
+      <a href="{% url 'teacher_schedule' %}" class="{% if current_page == 'Schedule' %}active{% endif %}">My Schedule</a>
+    {% endif %}
+    <a href="{% url 'view_lab_availability' %}" class="{% if current_page == 'Availability' %}active{% endif %}">Lab Availability</a>
+    <a href="{% url 'attendance_records' %}" class="{% if current_page == 'Attendance' %}active{% endif %}">Attendance</a>
+    <a href="{% url 'teacher_assignments' %}" class="{% if current_page == 'Assignments' %}active{% endif %}">Assignments</a>
+  </nav>
+
+  <form action="{% url 'logout' %}" method="POST" class="logout-form">
+    {% csrf_token %}<button type="submit" class="logout-btn">Logout</button>
+  </form>
+</aside>

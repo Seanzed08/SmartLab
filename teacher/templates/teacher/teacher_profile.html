@@ -1,0 +1,111 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Teacher Profile | NEUST</title>
+  <link rel="stylesheet" href="{% static 'css/teacher/teacher-dashboard.css' %}">
+  <link rel="stylesheet" href="{% static 'css/admin/admin-style.css' %}">
+  <style>
+    .profile-container {
+      padding: 30px;
+      background-color: #f9f9f9;
+    }
+
+    .profile-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 30px;
+    }
+
+    .profile-photo {
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      object-fit: cover;
+      margin-right: 30px;
+      border: 3px solid #ddd;
+    }
+
+    .profile-form label {
+      font-weight: bold;
+      margin-top: 10px;
+    }
+
+    .profile-form input {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+
+    .profile-form {
+      max-width: 500px;
+    }
+
+    .profile-form button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .profile-form button:hover {
+      background: #0056b3;
+    }
+
+    .note {
+      font-size: 12px;
+      color: #777;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+<div class="dashboard-container">
+  {% include 'includes/teacher_sidebar.html' %}
+
+  <div class="main-panel">
+    {% include 'includes/teacher_header.html' %}
+
+    <section class="content-area profile-container">
+      <h2>My Profile</h2>
+
+      <form method="POST" enctype="multipart/form-data" class="profile-form">
+        {% csrf_token %}
+        <div class="profile-header">
+          <img src="{% if teacher_profile_image %}{{ MEDIA_URL }}{{ teacher_profile_image }}{% else %}{% static 'img/admin-icon.png' %}{% endif %}" 
+               class="profile-photo" alt="Teacher Profile Image">
+
+          <div>
+            <label for="profile_image">Upload New Photo</label><br>
+            <input type="file" name="profile_image" accept="image/*">
+          </div>
+        </div>
+
+        <label>First Name</label>
+        <input type="text" name="first_name" value="{{ first_name }}" required>
+
+        <label>Middle Name</label>
+        <input type="text" name="middle_name" value="{{ middle_name }}">
+
+        <label>Last Name</label>
+        <input type="text" name="last_name" value="{{ last_name }}" required>
+
+        <label>Email</label>
+        <input type="email" name="email" value="{{ email }}" required>
+
+        <label>Password <span class="note">(Leave blank to keep current password)</span></label>
+        <input type="password" name="password" placeholder="••••••••••">
+
+        <button type="submit">Update Profile</button>
+      </form>
+    </section>
+  </div>
+</div>
+</body>
+</html>
